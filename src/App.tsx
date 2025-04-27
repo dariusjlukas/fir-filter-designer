@@ -24,27 +24,43 @@ import {
   SharedSelection,
   Switch,
   Tab,
-  Table,
-  TableBody,
-  TableCell,
-  TableColumn,
-  TableHeader,
-  TableRow,
   Tabs,
 } from '@heroui/react';
 import { useTheme } from '@heroui/use-theme';
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { WindowMethodDesigner } from './WindowMethodDesigner';
-import { FilterResponseScene } from './FilterResponseScene';
+import { ThreejsPlot } from './ThreejsPlot';
+import { abs, fft, log10, number } from 'mathjs';
+import { fftshift } from './commonMath';
 
 export const App = () => {
   const { theme, setTheme } = useTheme('dark');
 
   const [filterDesignInProgress, setFilterDesignInProgress] = useState(false);
-  const [filterTaps, setFilterTaps] = useState<number[]>([1, 2, 3, 2, 1]);
+  const [filterTaps, setFilterTaps] = useState<number[]>([]);
   const [designMethod, setDesignMethod] = useState<SharedSelection>(
     new Set([]),
   );
+
+  const frequencyResponse = useMemo(
+    () =>
+      filterTaps.length !== 0
+        ? ((abs(fftshift(fft(filterTaps))) as number[]).map(
+            (mag) => 20 * log10(mag),
+          ) as number[])
+        : [],
+    [filterTaps],
+  );
+
+  useEffect(() => {
+    if (!filterDesignInProgress && filterTaps.length !== 0) {
+      addToast({
+        title: `Design finished! Tap count: ${filterTaps.length}`,
+        color: 'success',
+      });
+      console.log('frequencyResponse: ', frequencyResponse);
+    }
+  }, [filterDesignInProgress]);
 
   return (
     <div className='size-full flex flex-col'>
@@ -99,11 +115,11 @@ export const App = () => {
           </CardBody>
           <CardFooter>
             <Button
+              isDisabled={(designMethod as Set<string | number>).size === 0}
               className='w-full'
               color='primary'
               isLoading={filterDesignInProgress}
               onPress={() => {
-                addToast({ title: 'Design in Progress' });
                 setFilterDesignInProgress(true);
               }}
             >
@@ -116,21 +132,28 @@ export const App = () => {
             <Tabs radius='lg'>
               <Tab
                 className='h-full'
-                key='Filter Response'
+                key='Frequency Response'
                 title={
                   <>
                     <FontAwesomeIcon icon={faChartSimple} />{' '}
-                    <span className='px-1'>Filter Response</span>
+                    <span className='px-1'>Frequency Response</span>
                   </>
                 }
               >
                 {filterTaps.length === 0 ? (
                   <h1>Design a filter to view its frequency response.</h1>
                 ) : (
-                  <FilterResponseScene filterTaps={filterTaps} theme={theme} />
+                  <ThreejsPlot
+                    xValues={[...Array(filterTaps.length).keys()]}
+                    yValues={frequencyResponse}
+                    xRange={[-15, 15]}
+                    yRange={[-5, 5]}
+                    theme={theme}
+                  />
                 )}
               </Tab>
               <Tab
+                className='h-full'
                 key='Taps'
                 title={
                   <>
@@ -139,22 +162,17 @@ export const App = () => {
                   </>
                 }
               >
-                <Table isStriped aria-label='Filter Taps'>
-                  <TableHeader>
-                    <TableColumn>Tap Index</TableColumn>
-                    <TableColumn>Tap Value</TableColumn>
-                  </TableHeader>
-                  <TableBody>
-                    {filterTaps.map((tap, index) => (
-                      <>
-                        <TableRow key={index}>
-                          <TableCell>{index}</TableCell>
-                          <TableCell>{tap}</TableCell>
-                        </TableRow>
-                      </>
-                    ))}
-                  </TableBody>
-                </Table>
+                {filterTaps.length === 0 ? (
+                  <h1>Design a filter to view its taps response.</h1>
+                ) : (
+                  <ThreejsPlot
+                    xValues={[...Array(filterTaps.length).keys()]}
+                    yValues={number(filterTaps) as number[]}
+                    xRange={[-15, 15]}
+                    yRange={[-5, 5]}
+                    theme={theme}
+                  />
+                )}
               </Tab>
               <Tab
                 key='Code'
@@ -165,7 +183,7 @@ export const App = () => {
                   </>
                 }
               >
-                <Code>{JSON.stringify(filterTaps)}</Code>
+                <Code>{JSON.stringify(number(filterTaps))}</Code>
               </Tab>
             </Tabs>
           </CardBody>
