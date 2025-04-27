@@ -14,6 +14,7 @@ import {
   CardBody,
   CardFooter,
   CardHeader,
+  Code,
   Link,
   Navbar,
   NavbarBrand,
@@ -23,28 +24,31 @@ import {
   SharedSelection,
   Switch,
   Tab,
+  Table,
+  TableBody,
+  TableCell,
+  TableColumn,
+  TableHeader,
+  TableRow,
   Tabs,
 } from '@heroui/react';
 import { useTheme } from '@heroui/use-theme';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { WindowMethodDesigner } from './WindowMethodDesigner';
+import { FilterResponseScene } from './FilterResponseScene';
 
 export const App = () => {
   const { theme, setTheme } = useTheme('dark');
 
   const [filterDesignInProgress, setFilterDesignInProgress] = useState(false);
-  const [filterTaps, setFilterTaps] = useState<number[]>([]);
+  const [filterTaps, setFilterTaps] = useState<number[]>([1, 2, 3, 2, 1]);
   const [designMethod, setDesignMethod] = useState<SharedSelection>(
     new Set([]),
   );
 
-  useEffect(() => {
-    console.log(designMethod);
-  }, [designMethod]);
-
   return (
     <div className='size-full flex flex-col'>
-      <Navbar isBordered maxWidth='2xl'>
+      <Navbar isBordered maxWidth='full' className='pr-4'>
         <NavbarBrand>
           <h1 className='font-bold font-mono'>FIR FILTER DESIGNER</h1>
         </NavbarBrand>
@@ -108,9 +112,10 @@ export const App = () => {
           </CardFooter>
         </Card>
         <Card className='col-span-3 h-full'>
-          <CardBody>
+          <CardBody className='h-full'>
             <Tabs radius='lg'>
               <Tab
+                className='h-full'
                 key='Filter Response'
                 title={
                   <>
@@ -119,7 +124,11 @@ export const App = () => {
                   </>
                 }
               >
-                Filter Response
+                {filterTaps.length === 0 ? (
+                  <h1>Design a filter to view its frequency response.</h1>
+                ) : (
+                  <FilterResponseScene filterTaps={filterTaps} theme={theme} />
+                )}
               </Tab>
               <Tab
                 key='Taps'
@@ -130,7 +139,22 @@ export const App = () => {
                   </>
                 }
               >
-                Taps...
+                <Table isStriped aria-label='Filter Taps'>
+                  <TableHeader>
+                    <TableColumn>Tap Index</TableColumn>
+                    <TableColumn>Tap Value</TableColumn>
+                  </TableHeader>
+                  <TableBody>
+                    {filterTaps.map((tap, index) => (
+                      <>
+                        <TableRow key={index}>
+                          <TableCell>{index}</TableCell>
+                          <TableCell>{tap}</TableCell>
+                        </TableRow>
+                      </>
+                    ))}
+                  </TableBody>
+                </Table>
               </Tab>
               <Tab
                 key='Code'
@@ -141,7 +165,7 @@ export const App = () => {
                   </>
                 }
               >
-                Code...
+                <Code>{JSON.stringify(filterTaps)}</Code>
               </Tab>
             </Tabs>
           </CardBody>
