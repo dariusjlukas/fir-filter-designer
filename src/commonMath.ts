@@ -8,51 +8,32 @@ import {
   multiply,
   pow,
   sin,
-  sqrt,
-  subtract,
+  smaller,
 } from 'mathjs';
 
 export const sinc = (x: BigNumber): BigNumber => divide(sin(x), x) as BigNumber;
 
 //Modified bessel function of the first kind
-export const I0 = (z: BigNumber, kmax = 200): BigNumber => {
+export const I0 = (
+  z: BigNumber,
+  kmax = 1000,
+  tolerance = bignumber('1.0e-14'),
+): BigNumber => {
   let acc = bignumber(0);
   for (let k = 0; k < kmax; k++) {
-    acc = add(
-      acc,
-      divide(
-        pow(multiply(bignumber(0.25), pow(z, 2)), k),
-        pow(factorial(bignumber(k)), 2),
-      ),
-    ) as BigNumber;
+    const nextIterationValue = divide(
+      pow(multiply(bignumber(0.25), pow(z, 2)), k),
+      pow(factorial(bignumber(k)), 2),
+    );
+    if (smaller(nextIterationValue, tolerance)) {
+      console.log('tolerance reached, exiting early');
+      k = kmax;
+      break;
+    } else {
+      acc = add(acc, nextIterationValue) as BigNumber;
+    }
   }
   return acc;
-};
-
-export const calcKaiserWindow = (beta: number, length: number): BigNumber[] => {
-  return [...Array(length).keys()].map(
-    (n) =>
-      divide(
-        I0(
-          multiply(
-            bignumber(beta),
-            sqrt(
-              subtract(
-                bignumber(1),
-                pow(
-                  subtract(
-                    divide(multiply(bignumber(2), bignumber(n)), length),
-                    bignumber(1),
-                  ),
-                  bignumber(2),
-                ),
-              ) as BigNumber,
-            ),
-          ) as BigNumber,
-        ),
-        I0(bignumber(beta)),
-      ) as BigNumber,
-  );
 };
 
 export const fftshift = (fftValues: Complex[] | number[] | BigNumber[]) => {

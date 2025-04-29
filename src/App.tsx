@@ -14,6 +14,7 @@ import {
   CardBody,
   CardFooter,
   CardHeader,
+  Chip,
   Code,
   Link,
   Navbar,
@@ -30,26 +31,39 @@ import { useTheme } from '@heroui/use-theme';
 import { useEffect, useMemo, useState } from 'react';
 import { WindowMethodDesigner } from './WindowMethodDesigner';
 import { ThreejsPlot } from './ThreejsPlot';
-import { abs, fft, log10, number } from 'mathjs';
+import { abs, BigNumber, fft, floor, log10, multiply, number } from 'mathjs';
 import { fftshift } from './commonMath';
 
 export const App = () => {
   const { theme, setTheme } = useTheme('dark');
 
   const [filterDesignInProgress, setFilterDesignInProgress] = useState(false);
-  const [filterTaps, setFilterTaps] = useState<number[]>([]);
+  const [filterTaps, setFilterTaps] = useState<BigNumber[]>([]);
   const [designMethod, setDesignMethod] = useState<SharedSelection>(
     new Set([]),
   );
 
+  const fftLengthScalar = 8;
+
   const frequencyResponse = useMemo(
     () =>
       filterTaps.length !== 0
-        ? ((abs(fftshift(fft(filterTaps))) as number[]).map(
-            (mag) => 20 * log10(mag),
-          ) as number[])
+        ? (abs(
+            fftshift(
+              fft(
+                Array(floor(filterTaps.length * (fftLengthScalar / 2)))
+                  .fill(0)
+                  .concat(number(filterTaps))
+                  .concat(
+                    Array(
+                      floor(filterTaps.length * (fftLengthScalar / 2)),
+                    ).fill(0),
+                  ),
+              ),
+            ),
+          ).map((mag) => multiply(20, log10(mag))) as number[])
         : [],
-    [filterTaps],
+    [filterTaps, fftLengthScalar],
   );
 
   useEffect(() => {
@@ -113,7 +127,14 @@ export const App = () => {
               <></>
             )}
           </CardBody>
-          <CardFooter>
+          <CardFooter className='flex flex-col gap-2'>
+            {filterTaps.length !== 0 && !filterDesignInProgress ? (
+              <Chip variant='faded'>
+                Filter design finished! Number of taps: {filterTaps.length}.
+              </Chip>
+            ) : (
+              <></>
+            )}
             <Button
               isDisabled={(designMethod as Set<string | number>).size === 0}
               className='w-full'
@@ -144,7 +165,7 @@ export const App = () => {
                   <h1>Design a filter to view its frequency response.</h1>
                 ) : (
                   <ThreejsPlot
-                    xValues={[...Array(filterTaps.length).keys()]}
+                    xValues={[...Array(frequencyResponse.length).keys()]}
                     yValues={frequencyResponse}
                     xRange={[-15, 15]}
                     yRange={[-5, 5]}
@@ -183,7 +204,9 @@ export const App = () => {
                   </>
                 }
               >
-                <Code>{JSON.stringify(number(filterTaps))}</Code>
+                <Code>
+                  <pre>[{filterTaps.map((v) => `${v.toString()},\n`)}]</pre>
+                </Code>
               </Tab>
             </Tabs>
           </CardBody>

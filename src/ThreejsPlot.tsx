@@ -1,4 +1,3 @@
-/* eslint-disable react/no-unknown-property */
 import { Canvas } from '@react-three/fiber';
 import {
   Grid,
@@ -50,7 +49,7 @@ export const ThreejsPlot = (props: FilterResponseSceneProps) => {
       <OrthographicCamera zoom={30} position={[0, 0, 10]} makeDefault />
       <OrbitControls
         minZoom={10}
-        maxZoom={300}
+        maxZoom={400}
         dampingFactor={0.3}
         enableRotate={false}
         makeDefault

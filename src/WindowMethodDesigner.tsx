@@ -1,76 +1,25 @@
 import { NumberInput, Select, SelectItem } from '@heroui/react';
-import {
-  bignumber,
-  BigNumber,
-  divide,
-  floor,
-  log10,
-  max,
-  multiply,
-  number,
-  pi,
-  sum,
-} from 'mathjs';
+import { bignumber, BigNumber, number } from 'mathjs';
 import { useEffect, useState } from 'react';
 import { useImmer } from 'use-immer';
-import { calcKaiserWindow, sinc } from './commonMath';
-
-type WindowTypes = 'hamming' | 'hanning' | 'kaiser';
-
-type KaiserDesignParams = {
-  cutoffFreq: number;
-  transitionBandwidth: number;
-  minStopbandAttenuation: number;
-  maxPassbandRipple: number;
-};
-
-const calcKaiserBeta = (A: number) => {
-  if (A > 50) {
-    return 0.1102 * (A - 8.7);
-  } else if (A >= 21) {
-    return 0.5842 * (A - 21) ** 0.4 + 0.07886 * (A - 21);
-  } else {
-    return 0;
-  }
-};
-
-const estimateKaiserTapCount = (A: number, transitionBandwidth: number) =>
-  floor((A - 8) / (2.285 * 2 * pi * transitionBandwidth)) + 1;
-
-const createKaiserLowpassFilter = (parameters: KaiserDesignParams) => {
-  const A = max(
-    parameters.minStopbandAttenuation,
-    20 * log10(10 ** (parameters.maxPassbandRipple / 20) - 1),
-  );
-  const beta = calcKaiserBeta(A);
-  let N = estimateKaiserTapCount(A, parameters.transitionBandwidth);
-  if (N % 2 === 0) {
-    N++;
-  }
-
-  const sampledSinc: BigNumber[] = [...Array(N).keys()].map((n) =>
-    2 * parameters.cutoffFreq * (n - (N - 1) / 2) === 0
-      ? bignumber(1)
-      : sinc(bignumber(2 * parameters.cutoffFreq * (n - (N - 1) / 2))),
-  );
-  const kaiserWindow = calcKaiserWindow(beta, N);
-
-  const h = sampledSinc.map(
-    (sample, index) => multiply(sample, kaiserWindow[index]) as BigNumber,
-  );
-  const h_sum = sum(h);
-  return h.map((v) => divide(v, h_sum) as BigNumber);
-};
+import {
+  FilterDesignWorkerInboundMessage,
+  WindowType,
+} from './filterDesignWorker';
+import {
+  createKaiserLowpassFilter,
+  KaiserDesignParams,
+} from './filterDesignFunctions';
 
 export type WindowMethodDesignerProps = {
   className: string | undefined;
-  setFilterTaps: React.Dispatch<React.SetStateAction<number[]>>;
+  setFilterTaps: React.Dispatch<React.SetStateAction<BigNumber[]>>;
   filterDesignInProgress: boolean;
   setFilterDesignInProgress: React.Dispatch<React.SetStateAction<boolean>>;
 };
 
 export const WindowMethodDesigner = (props: WindowMethodDesignerProps) => {
-  const [windowType, setWindowType] = useState<WindowTypes>('kaiser');
+  const [windowType, setWindowType] = useState<WindowType>('kaiser');
   const [kaiserDesignParams, setKaiserDesignParams] =
     useImmer<KaiserDesignParams>({
       cutoffFreq: 0.25,
@@ -83,10 +32,53 @@ export const WindowMethodDesigner = (props: WindowMethodDesignerProps) => {
   useEffect(() => {
     if (props.filterDesignInProgress) {
       console.log('Designing a filter with a: ', windowType, ' window');
-      const h = createKaiserLowpassFilter(kaiserDesignParams);
-      console.log('Taps: ', number(h));
-      props.setFilterTaps(number(h) as number[]);
-      props.setFilterDesignInProgress(false);
+      if (window.Worker) {
+        const windowDesignWorker = new Worker(
+          new URL('filterDesignWorker.ts', import.meta.url),
+          { type: 'module' },
+        );
+        const filterDesignMessage: FilterDesignWorkerInboundMessage = {
+          messageType: 'filter design request',
+          payload: {
+            designMethod: 'window',
+            parameters: {
+              windowType: 'kaiser',
+              windowParameters: kaiserDesignParams,
+            },
+          },
+        };
+        windowDesignWorker.onmessage = (m: MessageEvent<string>) => {
+          const workerMessage = JSON.parse(m.data);
+          console.log('Received message from worker: ', workerMessage);
+          switch (workerMessage.messageType) {
+            case 'filter taps': {
+              const taps = workerMessage.payload.map(
+                (v: { mathjs: string; value: string }) => bignumber(v.value),
+              );
+              console.log('Setting filter taps: ', taps);
+              props.setFilterTaps(taps);
+              props.setFilterDesignInProgress(false);
+              windowDesignWorker.terminate();
+              break;
+            }
+            default:
+              console.error(
+                'Received unknown message from filter design worker!',
+              );
+              break;
+          }
+        };
+        windowDesignWorker.postMessage(filterDesignMessage);
+      } else {
+        console.log('Web workers not supported, running in the main thread.');
+        const filterTaps = createKaiserLowpassFilter(kaiserDesignParams);
+        console.log('Design Finished');
+        console.log('Taps: ', number(filterTaps));
+        props.setFilterTaps(filterTaps);
+        props.setFilterDesignInProgress(false);
+      }
+
+      console.log('returning from useEffect');
     }
   }, [props.filterDesignInProgress]);
 
@@ -98,7 +90,7 @@ export const WindowMethodDesigner = (props: WindowMethodDesignerProps) => {
         disallowEmptySelection
         selectedKeys={new Set([windowType])}
         onSelectionChange={(keys) =>
-          setWindowType(keys.currentKey as WindowTypes)
+          setWindowType(keys.currentKey as WindowType)
         }
       >
         <SelectItem key='kaiser'>Kaiser</SelectItem>
