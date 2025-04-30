@@ -45,7 +45,7 @@ export const ThreejsPlot = (props: FilterResponseSceneProps) => {
   );
 
   return (
-    <Canvas shadows className='size-full bg-default-100 rounded-lg'>
+    <Canvas className='size-full bg-default-100 rounded-lg'>
       <OrthographicCamera zoom={30} position={[0, 0, 10]} makeDefault />
       <OrbitControls
         minZoom={10}
@@ -77,7 +77,11 @@ export const ThreejsPlot = (props: FilterResponseSceneProps) => {
         rotation={new THREE.Euler(Math.PI / 2, 0, 0)}
       />
       <Line
-        color={new THREE.Color(0, 0.4, 1)}
+        color={
+          props.theme === 'dark'
+            ? new THREE.Color(0, 0.4, 1)
+            : new THREE.Color(0, 0.2, 1)
+        }
         lineWidth={3}
         points={plotPoints}
       />

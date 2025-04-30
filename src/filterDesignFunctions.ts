@@ -19,9 +19,16 @@ export type KaiserDesignParams = {
   transitionBandwidth: number;
   minStopbandAttenuation: number;
   maxPassbandRipple: number;
+  besselMaxIterations: number;
+  besselDecimalPlaces: number;
 };
 
-export const calcKaiserWindow = (beta: number, length: number): BigNumber[] => {
+export const calcKaiserWindow = (
+  beta: number,
+  length: number,
+  besselMaxIterations: number,
+  besselTolerance: BigNumber,
+): BigNumber[] => {
   return [...Array(length).keys()].map(
     (n) =>
       divide(
@@ -41,6 +48,8 @@ export const calcKaiserWindow = (beta: number, length: number): BigNumber[] => {
               ) as BigNumber,
             ),
           ) as BigNumber,
+          besselMaxIterations,
+          besselTolerance,
         ),
         I0(bignumber(beta)),
       ) as BigNumber,
@@ -78,7 +87,12 @@ export const createKaiserLowpassFilter = (parameters: KaiserDesignParams) => {
       ? bignumber(1)
       : sinc(bignumber(2 * parameters.cutoffFreq * (n - (N - 1) / 2))),
   );
-  const kaiserWindow = calcKaiserWindow(beta, N);
+  const kaiserWindow = calcKaiserWindow(
+    beta,
+    N,
+    parameters.besselMaxIterations,
+    bignumber(`1.0e-${parameters.besselDecimalPlaces}`),
+  );
 
   const h = sampledSinc.map(
     (sample, index) => multiply(sample, kaiserWindow[index]) as BigNumber,

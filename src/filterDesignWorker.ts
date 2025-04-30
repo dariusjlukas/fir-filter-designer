@@ -20,11 +20,8 @@ export type FilterDesignRequest = {
 };
 
 type WindowDesignRequest = {
-  windowType: WindowType;
   windowParameters: KaiserDesignParams;
 };
-
-export type WindowType = 'hamming' | 'hanning' | 'kaiser';
 
 type ParksMcClellanDesignRequest = {
   stopbandAttenution: number;
@@ -38,25 +35,14 @@ onmessage = (m: MessageEvent<FilterDesignWorkerInboundMessage>) => {
       if (filterDesignRequest.designMethod === 'window') {
         const windowDesignRequest =
           filterDesignRequest.parameters as WindowDesignRequest;
-        if (windowDesignRequest.windowType === 'hamming') {
-          console.error('Hamming window not implemented yet!');
-        } else if (windowDesignRequest.windowType === 'hanning') {
-          console.error('Hanning window not implemented yet!');
-        } else if (windowDesignRequest.windowType === 'kaiser') {
-          const filterTaps = createKaiserLowpassFilter(
-            windowDesignRequest.windowParameters as KaiserDesignParams,
-          );
-          const responseMessage: FilterDesignWorkerOutboundMessage = {
-            messageType: 'filter taps',
-            payload: filterTaps,
-          };
-          postMessage(JSON.stringify(responseMessage));
-        } else {
-          console.error(
-            'Unknown window type: ',
-            windowDesignRequest.windowType,
-          );
-        }
+        const filterTaps = createKaiserLowpassFilter(
+          windowDesignRequest.windowParameters as KaiserDesignParams,
+        );
+        const responseMessage: FilterDesignWorkerOutboundMessage = {
+          messageType: 'filter taps',
+          payload: filterTaps,
+        };
+        postMessage(JSON.stringify(responseMessage));
       } else if (filterDesignRequest.designMethod === 'parksMcClellan') {
         // const ParksMcClellanDesignRequest = filterDesignRequest.parameters as ParksMcClellanDesignRequest;
         console.error('Parks-McClellan not implemented yet!');

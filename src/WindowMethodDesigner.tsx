@@ -1,11 +1,8 @@
-import { NumberInput, Select, SelectItem } from '@heroui/react';
+import { NumberInput } from '@heroui/react';
 import { bignumber, BigNumber, number } from 'mathjs';
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { useImmer } from 'use-immer';
-import {
-  FilterDesignWorkerInboundMessage,
-  WindowType,
-} from './filterDesignWorker';
+import { FilterDesignWorkerInboundMessage } from './filterDesignWorker';
 import {
   createKaiserLowpassFilter,
   KaiserDesignParams,
@@ -19,19 +16,19 @@ export type WindowMethodDesignerProps = {
 };
 
 export const WindowMethodDesigner = (props: WindowMethodDesignerProps) => {
-  const [windowType, setWindowType] = useState<WindowType>('kaiser');
   const [kaiserDesignParams, setKaiserDesignParams] =
     useImmer<KaiserDesignParams>({
       cutoffFreq: 0.25,
       transitionBandwidth: 0.05,
       minStopbandAttenuation: 60,
       maxPassbandRipple: 0.01,
+      besselMaxIterations: 1000,
+      besselDecimalPlaces: 14,
     });
 
   //Design a filter when requested
   useEffect(() => {
     if (props.filterDesignInProgress) {
-      console.log('Designing a filter with a: ', windowType, ' window');
       if (window.Worker) {
         const windowDesignWorker = new Worker(
           new URL('filterDesignWorker.ts', import.meta.url),
@@ -42,7 +39,6 @@ export const WindowMethodDesigner = (props: WindowMethodDesignerProps) => {
           payload: {
             designMethod: 'window',
             parameters: {
-              windowType: 'kaiser',
               windowParameters: kaiserDesignParams,
             },
           },
@@ -84,69 +80,80 @@ export const WindowMethodDesigner = (props: WindowMethodDesignerProps) => {
 
   return (
     <div className={props.className + ' flex flex-col gap-2'}>
-      <Select
-        isDisabled={props.filterDesignInProgress}
-        label='Window Type'
-        disallowEmptySelection
-        selectedKeys={new Set([windowType])}
-        onSelectionChange={(keys) =>
-          setWindowType(keys.currentKey as WindowType)
-        }
-      >
-        <SelectItem key='kaiser'>Kaiser</SelectItem>
-        <SelectItem key='hamming'>Hamming</SelectItem>
-        <SelectItem key='hanning'>Hanning</SelectItem>
-      </Select>
-      {windowType === 'kaiser' ? (
-        <div className='flex flex-col gap-1 p-1 border-2 border-dashed border-default/80 rounded-lg'>
-          <NumberInput
-            isDisabled={props.filterDesignInProgress}
-            value={kaiserDesignParams.cutoffFreq}
-            onValueChange={(value) =>
-              setKaiserDesignParams((draft) => {
-                draft.cutoffFreq = value;
-              })
-            }
-            size='sm'
-            label='Cutoff Frequency'
-          />
-          <NumberInput
-            isDisabled={props.filterDesignInProgress}
-            value={kaiserDesignParams.transitionBandwidth}
-            onValueChange={(value) =>
-              setKaiserDesignParams((draft) => {
-                draft.transitionBandwidth = value;
-              })
-            }
-            size='sm'
-            label='Transition Bandwidth'
-          />
-          <NumberInput
-            isDisabled={props.filterDesignInProgress}
-            value={kaiserDesignParams.minStopbandAttenuation}
-            onValueChange={(value) =>
-              setKaiserDesignParams((draft) => {
-                draft.minStopbandAttenuation = value;
-              })
-            }
-            size='sm'
-            label='Min Stopband Attenuation'
-          />
-          <NumberInput
-            isDisabled={props.filterDesignInProgress}
-            value={kaiserDesignParams.maxPassbandRipple}
-            onValueChange={(value) =>
-              setKaiserDesignParams((draft) => {
-                draft.maxPassbandRipple = value;
-              })
-            }
-            size='sm'
-            label='Max Passband Ripple'
-          />
-        </div>
-      ) : (
-        <></>
-      )}
+      <div className='flex flex-col gap-1 p-1 border-2 border-dashed border-default/80 rounded-lg'>
+        <NumberInput
+          isWheelDisabled
+          isDisabled={props.filterDesignInProgress}
+          value={kaiserDesignParams.cutoffFreq}
+          onValueChange={(value) =>
+            setKaiserDesignParams((draft) => {
+              draft.cutoffFreq = value;
+            })
+          }
+          size='sm'
+          label='Cutoff Frequency'
+        />
+        <NumberInput
+          isWheelDisabled
+          isDisabled={props.filterDesignInProgress}
+          value={kaiserDesignParams.transitionBandwidth}
+          onValueChange={(value) =>
+            setKaiserDesignParams((draft) => {
+              draft.transitionBandwidth = value;
+            })
+          }
+          size='sm'
+          label='Transition Bandwidth'
+        />
+        <NumberInput
+          isWheelDisabled
+          isDisabled={props.filterDesignInProgress}
+          value={kaiserDesignParams.minStopbandAttenuation}
+          onValueChange={(value) =>
+            setKaiserDesignParams((draft) => {
+              draft.minStopbandAttenuation = value;
+            })
+          }
+          size='sm'
+          label='Min Stopband Attenuation'
+        />
+        <NumberInput
+          isWheelDisabled
+          isDisabled={props.filterDesignInProgress}
+          value={kaiserDesignParams.maxPassbandRipple}
+          onValueChange={(value) =>
+            setKaiserDesignParams((draft) => {
+              draft.maxPassbandRipple = value;
+            })
+          }
+          size='sm'
+          label='Max Passband Ripple'
+        />
+        <NumberInput
+          isWheelDisabled
+          isDisabled={props.filterDesignInProgress}
+          value={kaiserDesignParams.besselMaxIterations}
+          onValueChange={(value) =>
+            setKaiserDesignParams((draft) => {
+              draft.besselMaxIterations = value;
+            })
+          }
+          size='sm'
+          label='Max Bessel Calculation Iterations'
+        />
+        <NumberInput
+          isWheelDisabled
+          isDisabled={props.filterDesignInProgress}
+          value={kaiserDesignParams.besselDecimalPlaces}
+          onValueChange={(value) =>
+            setKaiserDesignParams((draft) => {
+              draft.besselDecimalPlaces = value;
+            })
+          }
+          size='sm'
+          label='Desired Number of Accurate Bessel Decimal Places'
+        />
+      </div>
     </div>
   );
 };

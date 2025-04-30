@@ -6,12 +6,16 @@ import {
   divide,
   factorial,
   multiply,
+  pi,
   pow,
   sin,
   smaller,
 } from 'mathjs';
 
-export const sinc = (x: BigNumber): BigNumber => divide(sin(x), x) as BigNumber;
+export const sinc = (x: BigNumber): BigNumber => {
+  const pix = multiply(bignumber(pi), x) as BigNumber;
+  return divide(sin(pix), pix) as BigNumber;
+};
 
 //Modified bessel function of the first kind
 export const I0 = (
@@ -26,7 +30,6 @@ export const I0 = (
       pow(factorial(bignumber(k)), 2),
     );
     if (smaller(nextIterationValue, tolerance)) {
-      console.log('tolerance reached, exiting early');
       k = kmax;
       break;
     } else {

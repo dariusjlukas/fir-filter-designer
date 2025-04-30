@@ -1,7 +1,7 @@
 import { faGithub } from '@fortawesome/free-brands-svg-icons';
 import {
+  faChartLine,
   faChartSimple,
-  faCode,
   faList,
   faMoon,
   faSun,
@@ -15,7 +15,6 @@ import {
   CardFooter,
   CardHeader,
   Chip,
-  Code,
   Link,
   Navbar,
   NavbarBrand,
@@ -26,6 +25,7 @@ import {
   Switch,
   Tab,
   Tabs,
+  Textarea,
 } from '@heroui/react';
 import { useTheme } from '@heroui/use-theme';
 import { useEffect, useMemo, useState } from 'react';
@@ -33,6 +33,8 @@ import { WindowMethodDesigner } from './WindowMethodDesigner';
 import { ThreejsPlot } from './ThreejsPlot';
 import { abs, BigNumber, fft, floor, log10, multiply, number } from 'mathjs';
 import { fftshift } from './commonMath';
+
+export type OutputDatatype = 'float64';
 
 export const App = () => {
   const { theme, setTheme } = useTheme('dark');
@@ -42,6 +44,8 @@ export const App = () => {
   const [designMethod, setDesignMethod] = useState<SharedSelection>(
     new Set([]),
   );
+  const [outputDatatype, setOutputDatatype] =
+    useState<OutputDatatype>('float64');
 
   const fftLengthScalar = 8;
 
@@ -109,12 +113,25 @@ export const App = () => {
               selectionMode='single'
               label='Design Method'
             >
-              <SelectItem key='windowMethod'>Window Method</SelectItem>
+              <SelectItem key='kaiserWindow'>Kaiser Window</SelectItem>
               <SelectItem key='parksMcClellan'>Parks-McClellan</SelectItem>
+            </Select>
+            <Select
+              className='mt-2'
+              isDisabled={filterDesignInProgress}
+              disallowEmptySelection={true}
+              selectedKeys={[outputDatatype]}
+              onSelectionChange={(keys) =>
+                setOutputDatatype(keys.currentKey as OutputDatatype)
+              }
+              selectionMode='single'
+              label='Output Datatype'
+            >
+              <SelectItem key='float64'>Float64</SelectItem>
             </Select>
             {(designMethod as Set<string | number>).size === 0 ? (
               <></>
-            ) : designMethod.currentKey === 'windowMethod' ? (
+            ) : designMethod.currentKey === 'kaiserWindow' ? (
               <WindowMethodDesigner
                 className='mt-2'
                 setFilterTaps={setFilterTaps}
@@ -178,8 +195,8 @@ export const App = () => {
                 key='Taps'
                 title={
                   <>
-                    <FontAwesomeIcon icon={faList} />{' '}
-                    <span className='px-1'>Filter Taps</span>
+                    <FontAwesomeIcon icon={faChartLine} />{' '}
+                    <span className='px-1'>Filter Tap Plot</span>
                   </>
                 }
               >
@@ -196,17 +213,25 @@ export const App = () => {
                 )}
               </Tab>
               <Tab
+                className='h-full'
                 key='Code'
                 title={
                   <>
-                    <FontAwesomeIcon icon={faCode} />{' '}
-                    <span className='px-1'>Code</span>
+                    <FontAwesomeIcon icon={faList} />{' '}
+                    <span className='px-1'>Filter Taps</span>
                   </>
                 }
               >
-                <Code>
-                  <pre>[{filterTaps.map((v) => `${v.toString()},\n`)}]</pre>
-                </Code>
+                <Textarea
+                  maxRows={30}
+                  variant='bordered'
+                  isReadOnly
+                  value={
+                    '[' +
+                    filterTaps.map((v) => `${number(v).toString()}\n`) +
+                    ']'
+                  }
+                />
               </Tab>
             </Tabs>
           </CardBody>
