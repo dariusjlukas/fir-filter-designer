@@ -87,7 +87,10 @@ export const App = () => {
           <h1 className='font-bold font-mono'>FIR FILTER DESIGNER</h1>
         </NavbarBrand>
         <NavbarContent justify='end'>
-          <Link color='foreground' href='https://www.github.com'>
+          <Link
+            color='foreground'
+            href='https://github.com/dariusjlukas/filter-designer'
+          >
             <FontAwesomeIcon size='xl' icon={faGithub} />
           </Link>
           <Switch
