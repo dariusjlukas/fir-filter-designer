@@ -111,17 +111,6 @@ export const App = () => {
           <CardBody>
             <Select
               isDisabled={filterDesignInProgress}
-              selectedKeys={designMethod}
-              onSelectionChange={setDesignMethod}
-              selectionMode='single'
-              label='Design Method'
-            >
-              <SelectItem key='kaiserWindow'>Kaiser Window</SelectItem>
-              <SelectItem key='parksMcClellan'>Parks-McClellan</SelectItem>
-            </Select>
-            <Select
-              className='mt-2'
-              isDisabled={filterDesignInProgress}
               disallowEmptySelection={true}
               selectedKeys={[outputDatatype]}
               onSelectionChange={(keys) =>
@@ -131,6 +120,17 @@ export const App = () => {
               label='Output Datatype'
             >
               <SelectItem key='float64'>Float64</SelectItem>
+            </Select>
+            <Select
+              className='mt-2'
+              isDisabled={filterDesignInProgress}
+              selectedKeys={designMethod}
+              onSelectionChange={setDesignMethod}
+              selectionMode='single'
+              label='Design Method'
+            >
+              <SelectItem key='kaiserWindow'>Kaiser Window</SelectItem>
+              <SelectItem key='parksMcClellan'>Parks-McClellan</SelectItem>
             </Select>
             {(designMethod as Set<string | number>).size === 0 ? (
               <></>
@@ -187,8 +187,6 @@ export const App = () => {
                   <ThreejsPlot
                     xValues={[...Array(frequencyResponse.length).keys()]}
                     yValues={frequencyResponse}
-                    xRange={[-15, 15]}
-                    yRange={[-5, 5]}
                     theme={theme}
                   />
                 )}
@@ -209,8 +207,6 @@ export const App = () => {
                   <ThreejsPlot
                     xValues={[...Array(filterTaps.length).keys()]}
                     yValues={number(filterTaps) as number[]}
-                    xRange={[-15, 15]}
-                    yRange={[-5, 5]}
                     theme={theme}
                   />
                 )}
@@ -230,9 +226,7 @@ export const App = () => {
                   variant='bordered'
                   isReadOnly
                   value={
-                    '[' +
-                    filterTaps.map((v) => `${number(v).toString()}\n`) +
-                    ']'
+                    '[' + filterTaps.map((v) => `${number(v).toString()}`) + ']'
                   }
                 />
               </Tab>
