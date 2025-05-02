@@ -202,7 +202,7 @@ export const App = () => {
                 }
               >
                 {filterTaps.length === 0 ? (
-                  <h1>Design a filter to view its taps response.</h1>
+                  <h1>Design a filter to view its taps.</h1>
                 ) : (
                   <ThreejsPlot
                     xValues={[...Array(filterTaps.length).keys()]}

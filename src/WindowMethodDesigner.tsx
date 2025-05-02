@@ -151,7 +151,7 @@ export const WindowMethodDesigner = (props: WindowMethodDesignerProps) => {
             })
           }
           size='sm'
-          label='Desired Number of Accurate Bessel Decimal Places'
+          label='Desired Number of Bessel Function Decimal Places'
         />
       </div>
     </div>

@@ -1,16 +1,16 @@
 /* eslint-disable react/no-unknown-property */
-import { Canvas, useThree } from '@react-three/fiber';
+import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import {
   Grid,
-  Html,
   Hud,
   Line,
   OrbitControls,
   OrthographicCamera,
   Plane,
+  Text,
 } from '@react-three/drei';
 import * as THREE from 'three';
-import { useMemo } from 'react';
+import { useMemo, useRef } from 'react';
 import { max, min } from 'mathjs';
 import { linearMap } from './commonMath';
 
@@ -18,35 +18,84 @@ type AxisProps = {
   renderPriority: number;
   axis: 'x-axis' | 'y-axis';
   thickness: number;
-  tickCount: number;
+  tickSpacing: number;
   scaleRange: [number, number];
   scaling: 'linear' | 'logarithmic';
+  cameraWidth: number;
+  cameraHeight: number;
   theme: string;
 };
 
 const AxisOverlay = (props: AxisProps) => {
-  const { camera, viewport } = useThree();
-  console.log(viewport.width / 2);
+  const { camera, size } = useThree();
 
-  const tickLocations = [...Array(props.tickCount).keys()].map((x) =>
-    linearMap(x, 0, props.tickCount, -1, 1),
-  );
-  const tickValues = tickLocations.map((l) => l);
+  const tickGroupRefs = useRef<Map<number, THREE.Group | null>>(new Map());
+  const textRefs = useRef<
+    Map<number, { text: string; scale: THREE.Vector3 } | null>
+  >(new Map());
+
+  const tickCount = Math.ceil(props.cameraHeight / props.tickSpacing);
+  const ticks = [...Array(tickCount).keys()];
+
+  useFrame(() => {
+    tickGroupRefs.current.forEach((tick, i) => {
+      const currentTickPosition = tick?.position;
+      const tickCameraOffsetPosition =
+        i * props.tickSpacing - camera.position.y;
+
+      if (currentTickPosition !== undefined) {
+        tick?.position.set(
+          currentTickPosition.x,
+          (((tickCameraOffsetPosition % props.cameraHeight) +
+            props.cameraHeight) %
+            props.cameraHeight) -
+            props.cameraWidth / 2,
+          currentTickPosition.z,
+        );
+      }
+    });
+    textRefs.current.forEach((textRef, i) => {
+      const tickCameraOffsetPosition =
+        i * props.tickSpacing - camera.position.y;
+      const unwrappedIndex = Math.round(
+        ((((tickCameraOffsetPosition % props.cameraHeight) +
+          props.cameraHeight) %
+          props.cameraHeight) +
+          camera.position.y) /
+          props.tickSpacing,
+      );
+      const scaleValue = linearMap(
+        unwrappedIndex,
+        0,
+        tickCount,
+        props.scaleRange[0],
+        props.scaleRange[1],
+      );
+      if (textRef !== null && textRef !== undefined) {
+        textRef.text = scaleValue.toFixed(2);
+        textRef.scale.x = 35 / size.width;
+        textRef.scale.y = 35 / size.height;
+        // textRef.scale.y = aspectRatio;
+      }
+    });
+  });
 
   return (
     <Hud renderPriority={props.renderPriority}>
       <OrthographicCamera
         makeDefault
         zoom={1}
-        left={-1}
-        right={1}
-        top={1}
-        bottom={-1}
+        left={-props.cameraWidth / 2}
+        right={props.cameraWidth / 2}
+        top={props.cameraHeight / 2}
+        bottom={-props.cameraHeight / 2}
         position={[0, 0, 10]}
       />
       <Plane
-        position={new THREE.Vector3(-1 + props.thickness / 2, 0, 1)}
-        args={[props.thickness, 2, 2, 2]}
+        position={
+          new THREE.Vector3(-props.cameraWidth / 2 + props.thickness / 2, 0, 1)
+        }
+        args={[props.thickness, props.cameraHeight, 2, 2]}
       >
         <meshBasicMaterial
           transparent
@@ -58,10 +107,15 @@ const AxisOverlay = (props: AxisProps) => {
           }
         />
       </Plane>
-      {tickLocations.map((l, index) => (
-        <>
+      {ticks.map((id) => (
+        <group
+          ref={(el) => {
+            tickGroupRefs.current.set(id, el);
+          }}
+          position={new THREE.Vector3(-props.cameraWidth / 2, 0, 2)}
+          key={id}
+        >
           <Line
-            key={l}
             lineWidth={2}
             color={
               props.theme === 'dark'
@@ -69,17 +123,22 @@ const AxisOverlay = (props: AxisProps) => {
                 : new THREE.Color(0.9, 0.1, 0.1)
             }
             points={[
-              new THREE.Vector3(-1 + (3 * props.thickness) / 4, l, 2),
-              new THREE.Vector3(-1 + props.thickness, l, 2),
+              new THREE.Vector3((4 * props.thickness) / 5, 0, 2),
+              new THREE.Vector3(props.thickness, 0, 2),
             ]}
           />
-          <Html
-            center
-            position={new THREE.Vector3(-1 + props.thickness / 2 - 0.015, l, 2)}
+          <Text
+            position={new THREE.Vector3(0.005, 0, 0)}
+            anchorY='middle'
+            anchorX='left'
+            fontSize={1}
+            ref={(el) => {
+              textRefs.current.set(id, el);
+            }}
           >
-            {tickValues[index].toFixed(2)}
-          </Html>
-        </>
+            0.0
+          </Text>
+        </group>
       ))}
     </Hud>
   );
@@ -92,6 +151,11 @@ export type FilterResponseSceneProps = {
 };
 
 export const ThreejsPlot = (props: FilterResponseSceneProps) => {
+  const cellSize = 0.05;
+  const sectionSize = 0.2;
+  const cameraWidth = 2.4;
+  const cameraHeight = 2.4;
+
   const plotPoints = useMemo(
     () =>
       props.xValues.map(
@@ -114,10 +178,10 @@ export const ThreejsPlot = (props: FilterResponseSceneProps) => {
   return (
     <Canvas className='size-full bg-default-100 rounded-lg'>
       <OrthographicCamera
-        left={-1.2}
-        right={1.2}
-        top={1.2}
-        bottom={-1.2}
+        left={-cameraWidth / 2}
+        right={cameraWidth / 2}
+        top={cameraHeight / 2}
+        bottom={-cameraHeight / 2}
         zoom={1}
         position={[0, 0, 10]}
         makeDefault
@@ -135,14 +199,14 @@ export const ThreejsPlot = (props: FilterResponseSceneProps) => {
         fadeDistance={100}
         fadeStrength={1}
         cellThickness={1}
-        cellSize={0.1}
+        cellSize={cellSize}
         cellColor={
           props.theme === 'dark'
             ? new THREE.Color(0.01, 0.01, 0.01)
             : new THREE.Color(0.8, 0.8, 0.8)
         }
         sectionThickness={1}
-        sectionSize={0.5}
+        sectionSize={sectionSize}
         sectionColor={
           props.theme === 'dark'
             ? new THREE.Color(0.1, 0.2, 0.1)
@@ -155,9 +219,11 @@ export const ThreejsPlot = (props: FilterResponseSceneProps) => {
         theme={props.theme}
         renderPriority={1}
         axis={'x-axis'}
-        thickness={0.11}
-        tickCount={10}
-        scaleRange={[-1, 1]}
+        thickness={0.1}
+        tickSpacing={sectionSize}
+        scaleRange={[-1.2, 1.2]}
+        cameraWidth={cameraWidth}
+        cameraHeight={cameraHeight}
         scaling='logarithmic'
       />
       <Line
