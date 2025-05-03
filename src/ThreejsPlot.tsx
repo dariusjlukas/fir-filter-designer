@@ -30,13 +30,13 @@ type AxisProps = {
   pointerDown: boolean;
 };
 
+type DreiTextRef = { text: string; scale: THREE.Vector3 };
+
 const AxisOverlay = (props: AxisProps) => {
   const { camera, size } = useThree();
 
   const tickGroupRefs = useRef<Map<number, THREE.Group | null>>(new Map());
-  const textRefs = useRef<
-    Map<number, { text: string; scale: THREE.Vector3 } | null>
-  >(new Map());
+  const textRefs = useRef<Map<number, DreiTextRef | null>>(new Map());
 
   const cameraInlineLength =
     props.axis === 'y-axis' ? props.cameraHeight : props.cameraWidth;
@@ -121,7 +121,6 @@ const AxisOverlay = (props: AxisProps) => {
         }}
         onPointerLeave={() => {
           if (!props.pointerDown) {
-            console.log('pointer left, setting hovered to false');
             props.setHovered(false);
           }
         }}
@@ -195,7 +194,7 @@ const AxisOverlay = (props: AxisProps) => {
             anchorX={props.axis === 'y-axis' ? 'left' : 'center'}
             fontSize={1}
             ref={(el) => {
-              textRefs.current.set(id, el);
+              textRefs.current.set(id, el as DreiTextRef);
             }}
           >
             0.0
@@ -272,7 +271,6 @@ export const ThreejsPlot = (props: FilterResponseSceneProps) => {
   );
 
   const handlePointerUp = () => {
-    console.log('pointerUp');
     setPointerDown(false);
     setXAxisHovered(false);
     setYAxisHovered(false);
@@ -290,7 +288,6 @@ export const ThreejsPlot = (props: FilterResponseSceneProps) => {
     <Canvas
       className={`size-full bg-default-100 rounded-lg ${xAxisHovered ? 'cursor-ew-resize' : ''} ${yAxisHovered ? 'cursor-ns-resize' : ''}`}
       onPointerDown={() => {
-        console.log('pointerdown');
         setPointerDown(true);
       }}
     >

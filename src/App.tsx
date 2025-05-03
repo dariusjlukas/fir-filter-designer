@@ -76,9 +76,8 @@ export const App = () => {
         title: `Design finished! Tap count: ${filterTaps.length}`,
         color: 'success',
       });
-      console.log('frequencyResponse: ', frequencyResponse);
     }
-  }, [filterDesignInProgress]);
+  }, [filterDesignInProgress, filterTaps.length, frequencyResponse]);
 
   return (
     <div className='size-full flex flex-col'>
@@ -225,9 +224,9 @@ export const App = () => {
                   maxRows={30}
                   variant='bordered'
                   isReadOnly
-                  value={
-                    '[' + filterTaps.map((v) => `${number(v).toString()}`) + ']'
-                  }
+                  value={filterTaps
+                    .map((v) => `${number(v).toString()}`)
+                    .toString()}
                 />
               </Tab>
             </Tabs>

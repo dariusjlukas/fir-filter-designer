@@ -28,15 +28,14 @@ type ParksMcClellanDesignRequest = {
 };
 
 onmessage = (m: MessageEvent<FilterDesignWorkerInboundMessage>) => {
-  console.log('Message received by filter design worker');
   switch (m.data.messageType) {
     case 'filter design request': {
-      const filterDesignRequest = m.data.payload as FilterDesignRequest;
+      const filterDesignRequest = m.data.payload;
       if (filterDesignRequest.designMethod === 'window') {
         const windowDesignRequest =
           filterDesignRequest.parameters as WindowDesignRequest;
         const filterTaps = createKaiserLowpassFilter(
-          windowDesignRequest.windowParameters as KaiserDesignParams
+          windowDesignRequest.windowParameters
         );
         const responseMessage: FilterDesignWorkerOutboundMessage = {
           messageType: 'filter taps',

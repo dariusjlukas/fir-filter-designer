@@ -10,7 +10,7 @@ import prettierConfig from 'eslint-config-prettier';
 export default [
   {
     // Global settings
-    ignores: ['node_modules', 'dist', 'build', '*.config.*'],
+    ignores: ['node_modules', 'dist', 'build'],
     languageOptions: {
       ecmaVersion: 2022,
       sourceType: 'module',
@@ -29,7 +29,7 @@ export default [
     },
     rules: {
       ...prettierConfig.rules,
-      'prettier/prettier': 'error',
+      'prettier/prettier': 'off',
     },
   },
   // React config

@@ -1,8 +1,12 @@
 import { NumberInput } from '@heroui/react';
-import { bignumber, BigNumber, number } from 'mathjs';
+import { bignumber, BigNumber } from 'mathjs';
 import { useEffect } from 'react';
+import * as React from 'react';
 import { useImmer } from 'use-immer';
-import { FilterDesignWorkerInboundMessage } from './filterDesignWorker';
+import {
+  FilterDesignWorkerInboundMessage,
+  FilterDesignWorkerOutboundMessage,
+} from './filterDesignWorker';
 import {
   createKaiserLowpassFilter,
   KaiserDesignParams,
@@ -15,7 +19,9 @@ export type WindowMethodDesignerProps = {
   setFilterDesignInProgress: React.Dispatch<React.SetStateAction<boolean>>;
 };
 
-export const WindowMethodDesigner = (props: WindowMethodDesignerProps) => {
+export const WindowMethodDesigner = (
+  props: WindowMethodDesignerProps
+): React.ReactNode => {
   const [kaiserDesignParams, setKaiserDesignParams] =
     useImmer<KaiserDesignParams>({
       cutoffFreq: 0.25,
@@ -44,14 +50,15 @@ export const WindowMethodDesigner = (props: WindowMethodDesignerProps) => {
           },
         };
         windowDesignWorker.onmessage = (m: MessageEvent<string>) => {
-          const workerMessage = JSON.parse(m.data);
-          console.log('Received message from worker: ', workerMessage);
+          const workerMessage = JSON.parse(m.data) as {
+            messageType: FilterDesignWorkerOutboundMessage['messageType'];
+            payload: { mathjs: string; value: string }[];
+          };
           switch (workerMessage.messageType) {
             case 'filter taps': {
               const taps = workerMessage.payload.map(
                 (v: { mathjs: string; value: string }) => bignumber(v.value)
               );
-              console.log('Setting filter taps: ', taps);
               props.setFilterTaps(taps);
               props.setFilterDesignInProgress(false);
               windowDesignWorker.terminate();
@@ -66,17 +73,18 @@ export const WindowMethodDesigner = (props: WindowMethodDesignerProps) => {
         };
         windowDesignWorker.postMessage(filterDesignMessage);
       } else {
-        console.log('Web workers not supported, running in the main thread.');
         const filterTaps = createKaiserLowpassFilter(kaiserDesignParams);
-        console.log('Design Finished');
-        console.log('Taps: ', number(filterTaps));
         props.setFilterTaps(filterTaps);
         props.setFilterDesignInProgress(false);
       }
-
-      console.log('returning from useEffect');
     }
-  }, [props.filterDesignInProgress]);
+  }, [
+    props.filterDesignInProgress,
+    props.setFilterTaps,
+    props.setFilterDesignInProgress,
+    kaiserDesignParams,
+    props,
+  ]);
 
   return (
     <div className={props.className + ' flex flex-col gap-2'}>

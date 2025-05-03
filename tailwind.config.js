@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-require-imports */
 // tailwind.config.js
 const { heroui } = require('@heroui/react');
 
