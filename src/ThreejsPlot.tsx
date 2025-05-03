@@ -10,9 +10,10 @@ import {
   Text,
 } from '@react-three/drei';
 import * as THREE from 'three';
-import { useMemo, useRef } from 'react';
+import { RefObject, useMemo, useRef, useState } from 'react';
 import { max, min } from 'mathjs';
 import { linearMap } from './commonMath';
+import { OrbitControls as OrbitControlsImpl } from 'three-stdlib';
 
 type AxisProps = {
   renderPriority: number;
@@ -24,6 +25,7 @@ type AxisProps = {
   cameraWidth: number;
   cameraHeight: number;
   theme: string;
+  setHovered: (value: boolean) => void;
 };
 
 const AxisOverlay = (props: AxisProps) => {
@@ -34,37 +36,57 @@ const AxisOverlay = (props: AxisProps) => {
     Map<number, { text: string; scale: THREE.Vector3 } | null>
   >(new Map());
 
-  const tickCount = Math.ceil(props.cameraHeight / props.tickSpacing);
+  const [localHoveredState, setLocalHoveredState] = useState(false);
+
+  const cameraInlineLength =
+    props.axis === 'y-axis' ? props.cameraHeight : props.cameraWidth;
+  const cameraOffAxisLength =
+    props.axis === 'y-axis' ? props.cameraWidth : props.cameraHeight;
+
+  const tickCount = Math.ceil(cameraInlineLength / props.tickSpacing);
   const ticks = [...Array(tickCount).keys()];
 
   useFrame(() => {
+    const cameraInlinePosition =
+      props.axis === 'y-axis' ? camera.position.y : camera.position.x;
+
     tickGroupRefs.current.forEach((tick, i) => {
       const currentTickPosition = tick?.position;
       const tickCameraOffsetPosition =
-        i * props.tickSpacing - camera.position.y;
+        i * props.tickSpacing - cameraInlinePosition;
 
       if (currentTickPosition !== undefined) {
-        tick?.position.set(
-          currentTickPosition.x,
-          (((tickCameraOffsetPosition % props.cameraHeight) +
-            props.cameraHeight) %
-            props.cameraHeight) -
-            props.cameraWidth / 2,
-          currentTickPosition.z,
-        );
+        const tickWrappedPosition =
+          (((tickCameraOffsetPosition % cameraInlineLength) +
+            cameraInlineLength) %
+            cameraInlineLength) -
+          cameraOffAxisLength / 2;
+        if (props.axis === 'y-axis') {
+          tick?.position.set(
+            currentTickPosition.x,
+            tickWrappedPosition,
+            currentTickPosition.z,
+          );
+        } else {
+          tick?.position.set(
+            tickWrappedPosition,
+            currentTickPosition.y,
+            currentTickPosition.z,
+          );
+        }
       }
     });
     textRefs.current.forEach((textRef, i) => {
       const tickCameraOffsetPosition =
-        i * props.tickSpacing - camera.position.y;
+        i * props.tickSpacing - cameraInlinePosition;
       const unwrappedIndex = Math.round(
-        ((((tickCameraOffsetPosition % props.cameraHeight) +
-          props.cameraHeight) %
-          props.cameraHeight) +
-          camera.position.y) /
+        ((((tickCameraOffsetPosition % cameraInlineLength) +
+          cameraInlineLength) %
+          cameraInlineLength) +
+          cameraInlinePosition) /
           props.tickSpacing,
       );
-      const scaleValue = linearMap(
+      const scaledValue = linearMap(
         unwrappedIndex,
         0,
         tickCount,
@@ -72,10 +94,10 @@ const AxisOverlay = (props: AxisProps) => {
         props.scaleRange[1],
       );
       if (textRef !== null && textRef !== undefined) {
-        textRef.text = scaleValue.toFixed(2);
+        // Keep the text a consistent size, regardless the the canvas size
+        textRef.text = scaledValue.toFixed(2);
         textRef.scale.x = 35 / size.width;
         textRef.scale.y = 35 / size.height;
-        // textRef.scale.y = aspectRatio;
       }
     });
   });
@@ -92,14 +114,38 @@ const AxisOverlay = (props: AxisProps) => {
         position={[0, 0, 10]}
       />
       <Plane
+        onPointerOver={() => {
+          props.setHovered(true);
+          setLocalHoveredState(true);
+        }}
+        onPointerLeave={(e) => {
+          if (e.buttons === 0) {
+            props.setHovered(false);
+            setLocalHoveredState(false);
+          }
+        }}
         position={
-          new THREE.Vector3(-props.cameraWidth / 2 + props.thickness / 2, 0, 1)
+          props.axis === 'y-axis'
+            ? new THREE.Vector3(
+                -cameraOffAxisLength / 2 + props.thickness / 2,
+                0,
+                1,
+              )
+            : new THREE.Vector3(
+                0,
+                -cameraOffAxisLength / 2 + props.thickness / 2,
+                1,
+              )
         }
-        args={[props.thickness, props.cameraHeight, 2, 2]}
+        args={
+          props.axis == 'y-axis'
+            ? [props.thickness, cameraInlineLength, 2, 2]
+            : [cameraInlineLength, props.thickness, 2, 2]
+        }
       >
         <meshBasicMaterial
           transparent
-          opacity={0.9}
+          opacity={localHoveredState ? 1 : 0.9}
           color={
             props.theme === 'dark'
               ? new THREE.Color(0.04, 0.04, 0.04)
@@ -112,7 +158,11 @@ const AxisOverlay = (props: AxisProps) => {
           ref={(el) => {
             tickGroupRefs.current.set(id, el);
           }}
-          position={new THREE.Vector3(-props.cameraWidth / 2, 0, 2)}
+          position={
+            props.axis === 'y-axis'
+              ? new THREE.Vector3(-props.cameraWidth / 2, 0, 2)
+              : new THREE.Vector3(0, -props.cameraHeight / 2, 0)
+          }
           key={id}
         >
           <Line
@@ -122,15 +172,26 @@ const AxisOverlay = (props: AxisProps) => {
                 ? new THREE.Color(0.5, 0.8, 0.5)
                 : new THREE.Color(0.9, 0.1, 0.1)
             }
-            points={[
-              new THREE.Vector3((4 * props.thickness) / 5, 0, 2),
-              new THREE.Vector3(props.thickness, 0, 2),
-            ]}
+            points={
+              props.axis === 'y-axis'
+                ? [
+                    new THREE.Vector3((4 * props.thickness) / 5, 0, 2),
+                    new THREE.Vector3(props.thickness, 0, 2),
+                  ]
+                : [
+                    new THREE.Vector3(0, (4 * props.thickness) / 5, 2),
+                    new THREE.Vector3(0, props.thickness, 2),
+                  ]
+            }
           />
           <Text
-            position={new THREE.Vector3(0.005, 0, 0)}
-            anchorY='middle'
-            anchorX='left'
+            position={
+              props.axis === 'y-axis'
+                ? new THREE.Vector3(0.005, 0, 3)
+                : new THREE.Vector3(0, 0.005, 3)
+            }
+            anchorY={props.axis === 'y-axis' ? 'middle' : 'bottom'}
+            anchorX={props.axis === 'y-axis' ? 'left' : 'center'}
             fontSize={1}
             ref={(el) => {
               textRefs.current.set(id, el);
@@ -144,6 +205,34 @@ const AxisOverlay = (props: AxisProps) => {
   );
 };
 
+type ControlsLockingHandlerProps = {
+  orbitControlsRef: RefObject<OrbitControlsImpl | null>;
+  xAxisHovered: boolean;
+  yAxisHovered: boolean;
+};
+
+const ControlsLockingHandler = (props: ControlsLockingHandlerProps) => {
+  const lastCameraCoordinated = useRef({ x: 0, y: 0 });
+
+  useFrame((rootState) => {
+    if (props.orbitControlsRef.current !== null) {
+      if (props.xAxisHovered) {
+        props.orbitControlsRef.current.target.y =
+          lastCameraCoordinated.current.y;
+        rootState.camera.position.y = lastCameraCoordinated.current.y;
+      } else if (props.yAxisHovered) {
+        props.orbitControlsRef.current.target.x =
+          lastCameraCoordinated.current.x;
+        rootState.camera.position.x = lastCameraCoordinated.current.x;
+      }
+    }
+    lastCameraCoordinated.current.x = rootState.camera.position.x;
+    lastCameraCoordinated.current.y = rootState.camera.position.y;
+  });
+
+  return <></>;
+};
+
 export type FilterResponseSceneProps = {
   xValues: number[];
   yValues: number[];
@@ -155,6 +244,11 @@ export const ThreejsPlot = (props: FilterResponseSceneProps) => {
   const sectionSize = 0.2;
   const cameraWidth = 2.4;
   const cameraHeight = 2.4;
+
+  const [xAxisHovered, setXAxisHovered] = useState(false);
+  const [yAxisHovered, setYAxisHovered] = useState(false);
+
+  const orbitControlsRef = useRef<OrbitControlsImpl>(null);
 
   const plotPoints = useMemo(
     () =>
@@ -176,7 +270,13 @@ export const ThreejsPlot = (props: FilterResponseSceneProps) => {
   );
 
   return (
-    <Canvas className='size-full bg-default-100 rounded-lg'>
+    <Canvas
+      className={`size-full bg-default-100 rounded-lg ${xAxisHovered ? 'cursor-ew-resize' : ''} ${yAxisHovered ? 'cursor-ns-resize' : ''}`}
+      onPointerUp={() => {
+        setXAxisHovered(false);
+        setYAxisHovered(false);
+      }}
+    >
       <OrthographicCamera
         left={-cameraWidth / 2}
         right={cameraWidth / 2}
@@ -187,11 +287,18 @@ export const ThreejsPlot = (props: FilterResponseSceneProps) => {
         makeDefault
       />
       <OrbitControls
+        ref={orbitControlsRef}
+        mouseButtons={{ LEFT: THREE.MOUSE.PAN, MIDDLE: THREE.MOUSE.DOLLY }}
         minZoom={0.4}
         maxZoom={8}
-        dampingFactor={0.3}
+        dampingFactor={0.5}
         enableRotate={false}
         makeDefault
+      />
+      <ControlsLockingHandler
+        orbitControlsRef={orbitControlsRef}
+        xAxisHovered={xAxisHovered}
+        yAxisHovered={yAxisHovered}
       />
       <Grid
         position={[0, 0, 0]}
@@ -225,6 +332,19 @@ export const ThreejsPlot = (props: FilterResponseSceneProps) => {
         cameraWidth={cameraWidth}
         cameraHeight={cameraHeight}
         scaling='logarithmic'
+        setHovered={setXAxisHovered}
+      />
+      <AxisOverlay
+        theme={props.theme}
+        renderPriority={2}
+        axis={'y-axis'}
+        thickness={0.1}
+        tickSpacing={sectionSize}
+        scaleRange={[-1.2, 1.2]}
+        cameraWidth={cameraWidth}
+        cameraHeight={cameraHeight}
+        scaling='logarithmic'
+        setHovered={setYAxisHovered}
       />
       <Line
         color={

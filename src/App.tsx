@@ -117,7 +117,7 @@ export const App = () => {
                 setOutputDatatype(keys.currentKey as OutputDatatype)
               }
               selectionMode='single'
-              label='Output Datatype'
+              label='Output Tap Datatype'
             >
               <SelectItem key='float64'>Float64</SelectItem>
             </Select>
