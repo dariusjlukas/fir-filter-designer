@@ -67,7 +67,7 @@ export default [
     languageOptions: {
       parser: typescriptParser,
       parserOptions: {
-        project: './tsconfig.json',
+        projectService: './tsconfig.json',
       },
     },
     rules: {
