@@ -36,7 +36,7 @@ onmessage = (m: MessageEvent<FilterDesignWorkerInboundMessage>) => {
         const windowDesignRequest =
           filterDesignRequest.parameters as WindowDesignRequest;
         const filterTaps = createKaiserLowpassFilter(
-          windowDesignRequest.windowParameters as KaiserDesignParams,
+          windowDesignRequest.windowParameters as KaiserDesignParams
         );
         const responseMessage: FilterDesignWorkerOutboundMessage = {
           messageType: 'filter taps',
@@ -49,7 +49,7 @@ onmessage = (m: MessageEvent<FilterDesignWorkerInboundMessage>) => {
       } else {
         console.error(
           'Unknown filter design method: ',
-          filterDesignRequest.designMethod,
+          filterDesignRequest.designMethod
         );
       }
       break;

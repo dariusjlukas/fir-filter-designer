@@ -21,13 +21,13 @@ export const sinc = (x: BigNumber): BigNumber => {
 export const I0 = (
   z: BigNumber,
   kmax = 1000,
-  tolerance = bignumber('1.0e-14'),
+  tolerance = bignumber('1.0e-14')
 ): BigNumber => {
   let acc = bignumber(0);
   for (let k = 0; k < kmax; k++) {
     const nextIterationValue = divide(
       pow(multiply(bignumber(0.25), pow(z, 2)), k),
-      pow(factorial(bignumber(k)), 2),
+      pow(factorial(bignumber(k)), 2)
     );
     if (smaller(nextIterationValue, tolerance)) {
       k = kmax;
@@ -52,5 +52,5 @@ export const linearMap = (
   inMin: number,
   inMax: number,
   outMin: number,
-  outMax: number,
+  outMax: number
 ) => ((x - inMin) * (outMax - outMin)) / (inMax - inMin) + outMin;

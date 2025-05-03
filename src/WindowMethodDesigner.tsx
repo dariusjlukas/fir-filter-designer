@@ -32,7 +32,7 @@ export const WindowMethodDesigner = (props: WindowMethodDesignerProps) => {
       if (window.Worker) {
         const windowDesignWorker = new Worker(
           new URL('filterDesignWorker.ts', import.meta.url),
-          { type: 'module' },
+          { type: 'module' }
         );
         const filterDesignMessage: FilterDesignWorkerInboundMessage = {
           messageType: 'filter design request',
@@ -49,7 +49,7 @@ export const WindowMethodDesigner = (props: WindowMethodDesignerProps) => {
           switch (workerMessage.messageType) {
             case 'filter taps': {
               const taps = workerMessage.payload.map(
-                (v: { mathjs: string; value: string }) => bignumber(v.value),
+                (v: { mathjs: string; value: string }) => bignumber(v.value)
               );
               console.log('Setting filter taps: ', taps);
               props.setFilterTaps(taps);
@@ -59,7 +59,7 @@ export const WindowMethodDesigner = (props: WindowMethodDesignerProps) => {
             }
             default:
               console.error(
-                'Received unknown message from filter design worker!',
+                'Received unknown message from filter design worker!'
               );
               break;
           }

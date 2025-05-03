@@ -42,7 +42,7 @@ export const App = () => {
   const [filterDesignInProgress, setFilterDesignInProgress] = useState(false);
   const [filterTaps, setFilterTaps] = useState<BigNumber[]>([]);
   const [designMethod, setDesignMethod] = useState<SharedSelection>(
-    new Set([]),
+    new Set([])
   );
   const [outputDatatype, setOutputDatatype] =
     useState<OutputDatatype>('float64');
@@ -60,14 +60,14 @@ export const App = () => {
                   .concat(number(filterTaps))
                   .concat(
                     Array(
-                      floor(filterTaps.length * (fftLengthScalar / 2)),
-                    ).fill(0),
-                  ),
-              ),
-            ),
+                      floor(filterTaps.length * (fftLengthScalar / 2))
+                    ).fill(0)
+                  )
+              )
+            )
           ).map((mag) => multiply(20, log10(mag))) as number[])
         : [],
-    [filterTaps, fftLengthScalar],
+    [filterTaps, fftLengthScalar]
   );
 
   useEffect(() => {

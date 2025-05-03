@@ -10,7 +10,7 @@ import {
   Text,
 } from '@react-three/drei';
 import * as THREE from 'three';
-import { RefObject, useMemo, useRef, useState } from 'react';
+import { RefObject, useEffect, useMemo, useRef, useState } from 'react';
 import { max, min } from 'mathjs';
 import { linearMap } from './commonMath';
 import { OrbitControls as OrbitControlsImpl } from 'three-stdlib';
@@ -25,7 +25,9 @@ type AxisProps = {
   cameraWidth: number;
   cameraHeight: number;
   theme: string;
+  hovered: boolean;
   setHovered: (value: boolean) => void;
+  pointerDown: boolean;
 };
 
 const AxisOverlay = (props: AxisProps) => {
@@ -35,8 +37,6 @@ const AxisOverlay = (props: AxisProps) => {
   const textRefs = useRef<
     Map<number, { text: string; scale: THREE.Vector3 } | null>
   >(new Map());
-
-  const [localHoveredState, setLocalHoveredState] = useState(false);
 
   const cameraInlineLength =
     props.axis === 'y-axis' ? props.cameraHeight : props.cameraWidth;
@@ -65,13 +65,13 @@ const AxisOverlay = (props: AxisProps) => {
           tick?.position.set(
             currentTickPosition.x,
             tickWrappedPosition,
-            currentTickPosition.z,
+            currentTickPosition.z
           );
         } else {
           tick?.position.set(
             tickWrappedPosition,
             currentTickPosition.y,
-            currentTickPosition.z,
+            currentTickPosition.z
           );
         }
       }
@@ -84,14 +84,14 @@ const AxisOverlay = (props: AxisProps) => {
           cameraInlineLength) %
           cameraInlineLength) +
           cameraInlinePosition) /
-          props.tickSpacing,
+          props.tickSpacing
       );
       const scaledValue = linearMap(
         unwrappedIndex,
         0,
         tickCount,
         props.scaleRange[0],
-        props.scaleRange[1],
+        props.scaleRange[1]
       );
       if (textRef !== null && textRef !== undefined) {
         // Keep the text a consistent size, regardless the the canvas size
@@ -115,13 +115,14 @@ const AxisOverlay = (props: AxisProps) => {
       />
       <Plane
         onPointerOver={() => {
-          props.setHovered(true);
-          setLocalHoveredState(true);
+          if (!props.pointerDown) {
+            props.setHovered(true);
+          }
         }}
-        onPointerLeave={(e) => {
-          if (e.buttons === 0) {
+        onPointerLeave={() => {
+          if (!props.pointerDown) {
+            console.log('pointer left, setting hovered to false');
             props.setHovered(false);
-            setLocalHoveredState(false);
           }
         }}
         position={
@@ -129,12 +130,12 @@ const AxisOverlay = (props: AxisProps) => {
             ? new THREE.Vector3(
                 -cameraOffAxisLength / 2 + props.thickness / 2,
                 0,
-                1,
+                1
               )
             : new THREE.Vector3(
                 0,
                 -cameraOffAxisLength / 2 + props.thickness / 2,
-                1,
+                1
               )
         }
         args={
@@ -145,7 +146,7 @@ const AxisOverlay = (props: AxisProps) => {
       >
         <meshBasicMaterial
           transparent
-          opacity={localHoveredState ? 1 : 0.9}
+          opacity={props.hovered ? 1 : 0.9}
           color={
             props.theme === 'dark'
               ? new THREE.Color(0.04, 0.04, 0.04)
@@ -247,6 +248,7 @@ export const ThreejsPlot = (props: FilterResponseSceneProps) => {
 
   const [xAxisHovered, setXAxisHovered] = useState(false);
   const [yAxisHovered, setYAxisHovered] = useState(false);
+  const [pointerDown, setPointerDown] = useState(false);
 
   const orbitControlsRef = useRef<OrbitControlsImpl>(null);
 
@@ -261,20 +263,35 @@ export const ThreejsPlot = (props: FilterResponseSceneProps) => {
               min(props.yValues),
               max(props.yValues),
               -1,
-              1,
+              1
             ),
-            0.01,
-          ),
+            0.01
+          )
       ),
-    [props.xValues, props.yValues],
+    [props.xValues, props.yValues]
   );
+
+  const handlePointerUp = () => {
+    console.log('pointerUp');
+    setPointerDown(false);
+    setXAxisHovered(false);
+    setYAxisHovered(false);
+  };
+
+  useEffect(() => {
+    window.addEventListener('pointerup', handlePointerUp);
+
+    return () => {
+      window.removeEventListener('pointerup', handlePointerUp);
+    };
+  }, []);
 
   return (
     <Canvas
       className={`size-full bg-default-100 rounded-lg ${xAxisHovered ? 'cursor-ew-resize' : ''} ${yAxisHovered ? 'cursor-ns-resize' : ''}`}
-      onPointerUp={() => {
-        setXAxisHovered(false);
-        setYAxisHovered(false);
+      onPointerDown={() => {
+        console.log('pointerdown');
+        setPointerDown(true);
       }}
     >
       <OrthographicCamera
@@ -332,7 +349,9 @@ export const ThreejsPlot = (props: FilterResponseSceneProps) => {
         cameraWidth={cameraWidth}
         cameraHeight={cameraHeight}
         scaling='logarithmic'
+        hovered={xAxisHovered}
         setHovered={setXAxisHovered}
+        pointerDown={pointerDown}
       />
       <AxisOverlay
         theme={props.theme}
@@ -344,7 +363,9 @@ export const ThreejsPlot = (props: FilterResponseSceneProps) => {
         cameraWidth={cameraWidth}
         cameraHeight={cameraHeight}
         scaling='logarithmic'
+        hovered={yAxisHovered}
         setHovered={setYAxisHovered}
+        pointerDown={pointerDown}
       />
       <Line
         color={
