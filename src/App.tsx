@@ -32,7 +32,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { WindowMethodDesigner } from './WindowMethodDesigner';
 import { ThreejsPlot } from './ThreejsPlot';
 import { abs, BigNumber, fft, floor, log10, multiply, number } from 'mathjs';
-import { fftshift } from './commonMath';
+import { fftshift, linearMap } from './commonMath';
 
 export type OutputDatatype = 'float64';
 
@@ -184,7 +184,10 @@ export const App = () => {
                   <h1>Design a filter to view its frequency response.</h1>
                 ) : (
                   <ThreejsPlot
-                    xValues={[...Array(frequencyResponse.length).keys()]}
+                    xValues={[...Array(frequencyResponse.length).keys()].map(
+                      (v) =>
+                        linearMap(v, 0, frequencyResponse.length, -0.5, 0.5)
+                    )}
                     yValues={frequencyResponse}
                     theme={theme}
                   />
@@ -224,9 +227,13 @@ export const App = () => {
                   maxRows={30}
                   variant='bordered'
                   isReadOnly
-                  value={filterTaps
-                    .map((v) => `${number(v).toString()}`)
-                    .toString()}
+                  value={
+                    '[' +
+                    filterTaps
+                      .map((v) => `${number(v).toString()}`)
+                      .toString() +
+                    ']'
+                  }
                 />
               </Tab>
             </Tabs>
