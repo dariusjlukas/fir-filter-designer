@@ -20,18 +20,18 @@ import {
 } from 'react';
 import { max, min } from 'mathjs';
 import { linearMap } from './commonMath';
-import { OrbitControls as OrbitControlsImpl } from 'three-stdlib';
+import { Line2, OrbitControls as OrbitControlsImpl } from 'three-stdlib';
 
-type AxisProps = {
+type AxisOverlayProps = {
   renderPriority: number;
   axis: 'x-axis' | 'y-axis';
   thickness: number;
   tickSpacing: number;
   scaleRange: [number, number];
-  scaling: 'linear' | 'logarithmic';
   cameraWidth: number;
   cameraHeight: number;
   theme: string;
+  labelDecimalPlaces: number;
   setPointerOverAxis: (value: boolean) => void;
   hovered: boolean;
   setHovered: (value: boolean) => void;
@@ -40,7 +40,7 @@ type AxisProps = {
 
 type DreiTextRef = { text: string; scale: THREE.Vector3 };
 
-const AxisOverlay = (props: AxisProps) => {
+const AxisOverlay = (props: AxisOverlayProps) => {
   const { camera, size } = useThree();
 
   const tickGroupRefs = useRef<Map<number, THREE.Group | null>>(new Map());
@@ -116,7 +116,7 @@ const AxisOverlay = (props: AxisProps) => {
       );
       if (textRef !== null && textRef !== undefined) {
         // Keep the text a consistent size, regardless the the canvas size
-        textRef.text = scaledValue.toFixed(2);
+        textRef.text = scaledValue.toFixed(props.labelDecimalPlaces);
         textRef.scale.x = 35 / size.width;
         textRef.scale.y = 35 / size.height;
       }
@@ -216,6 +216,9 @@ const AxisOverlay = (props: AxisProps) => {
             }
           />
           <Text
+            ref={(el) => {
+              textRefs.current.set(tickIndex, el as DreiTextRef);
+            }}
             color={
               props.theme === 'dark'
                 ? new THREE.Color(0.8, 0.8, 0.8)
@@ -229,9 +232,220 @@ const AxisOverlay = (props: AxisProps) => {
             anchorY={props.axis === 'y-axis' ? 'middle' : 'bottom'}
             anchorX={props.axis === 'y-axis' ? 'left' : 'center'}
             fontSize={1}
+          >
+            0.0
+          </Text>
+        </group>
+      ))}
+    </Hud>
+  );
+};
+
+type CrosshairProps = {
+  theme: string;
+  renderPriority: number;
+  cameraWidth: number;
+  cameraHeight: number;
+  pointerOverCanvas: boolean;
+  axisHovered: boolean;
+  xAxisThickness: number;
+  yAxisThickness: number;
+  xScaleRange: [number, number];
+  yScaleRange: [number, number];
+  xLabelDecimalPlaces: number;
+  yLabelDecimalPlaces: number;
+};
+
+const Crosshair = (props: CrosshairProps) => {
+  const { size } = useThree();
+  const xLineRef = useRef<Line2>(null);
+  const yLineRef = useRef<Line2>(null);
+
+  const textGroupRefs = useRef<Map<string, THREE.Group | null>>(new Map());
+  const textRefs = useRef<Map<string, DreiTextRef | null>>(new Map());
+
+  const axisList = ['x-axis', 'y-axis'];
+
+  useFrame((rootState) => {
+    const scaledPointerCoordinates = [
+      linearMap(
+        rootState.pointer.x,
+        -1,
+        1,
+        -props.cameraWidth / 2,
+        props.cameraWidth / 2
+      ),
+      linearMap(
+        rootState.pointer.y,
+        -1,
+        1,
+        -props.cameraHeight / 2,
+        props.cameraHeight / 2
+      ),
+    ];
+    if (xLineRef.current) {
+      xLineRef.current.position.set(scaledPointerCoordinates[0], 0, 0);
+    }
+    if (yLineRef.current) {
+      yLineRef.current.position.set(0, scaledPointerCoordinates[1], 0);
+    }
+
+    axisList.forEach((axis) => {
+      const textGroup = textGroupRefs.current.get(axis);
+      const currentTextPosition = textGroup?.position;
+
+      if (currentTextPosition !== undefined) {
+        if (axis === 'y-axis') {
+          textGroup?.position.set(
+            currentTextPosition.x,
+            scaledPointerCoordinates[1],
+            currentTextPosition.z
+          );
+        } else {
+          textGroup?.position.set(
+            scaledPointerCoordinates[0],
+            currentTextPosition.y,
+            currentTextPosition.z
+          );
+        }
+      }
+
+      const textRef = textRefs.current.get(axis);
+      console.log(
+        'pointerY: ',
+        rootState.pointer.y,
+        ' cameraY: ',
+        rootState.camera.position.y
+      );
+      const scaledValue =
+        axis === 'y-axis'
+          ? linearMap(
+              rootState.pointer.y +
+                linearMap(
+                  rootState.camera.position.y,
+                  -props.cameraHeight / 2,
+                  props.cameraHeight / 2,
+                  -1,
+                  1
+                ),
+              -1,
+              1,
+              props.yScaleRange[0],
+              props.yScaleRange[1]
+            )
+          : linearMap(
+              rootState.pointer.x +
+                linearMap(
+                  rootState.camera.position.x,
+                  -props.cameraWidth / 2,
+                  props.cameraWidth / 2,
+                  -1,
+                  1
+                ),
+              -1,
+              1,
+              props.xScaleRange[0],
+              props.xScaleRange[1]
+            );
+      if (textRef !== null && textRef !== undefined) {
+        // Keep the text a consistent size, regardless the the canvas size
+        textRef.text =
+          axis === 'y-axis'
+            ? (
+                Math.round(
+                  (scaledValue + Number.EPSILON) *
+                    10 ** props.yLabelDecimalPlaces
+                ) /
+                10 ** props.yLabelDecimalPlaces
+              ).toFixed(props.yLabelDecimalPlaces)
+            : (
+                Math.round(
+                  (scaledValue + Number.EPSILON) *
+                    10 ** props.xLabelDecimalPlaces
+                ) /
+                10 ** props.xLabelDecimalPlaces
+              ).toFixed(props.xLabelDecimalPlaces);
+        textRef.scale.x = 35 / size.width;
+        textRef.scale.y = 35 / size.height;
+      }
+    });
+  });
+
+  return (
+    <Hud renderPriority={props.renderPriority}>
+      <OrthographicCamera
+        makeDefault
+        zoom={1}
+        left={-props.cameraWidth / 2}
+        right={props.cameraWidth / 2}
+        top={props.cameraHeight / 2}
+        bottom={-props.cameraHeight / 2}
+        position={[0, 0, 10]}
+      />
+      <Line
+        ref={xLineRef}
+        color={
+          props.theme === 'dark'
+            ? new THREE.Color(0.5, 0.8, 0.5)
+            : new THREE.Color(0, 0, 0)
+        }
+        visible={props.pointerOverCanvas && !props.axisHovered}
+        points={[
+          new THREE.Vector3(
+            0,
+            -props.cameraHeight / 2 + (props.xAxisThickness - 15) / size.height,
+            4
+          ),
+          new THREE.Vector3(0, props.cameraHeight / 2, 4),
+        ]}
+      />
+      <Line
+        ref={yLineRef}
+        color={
+          props.theme === 'dark'
+            ? new THREE.Color(0.5, 0.8, 0.5)
+            : new THREE.Color(0, 0, 0)
+        }
+        visible={props.pointerOverCanvas && !props.axisHovered}
+        points={[
+          new THREE.Vector3(
+            -props.cameraWidth / 2 + (props.yAxisThickness - 15) / size.width,
+            0,
+            5
+          ),
+          new THREE.Vector3(props.cameraWidth / 2, 0, 5),
+        ]}
+      />
+      {axisList.map((axis) => (
+        <group
+          visible={props.pointerOverCanvas && !props.axisHovered}
+          ref={(el) => {
+            textGroupRefs.current.set(axis, el);
+          }}
+          position={
+            axis === 'y-axis'
+              ? new THREE.Vector3(-props.cameraWidth / 2, 0, 2)
+              : new THREE.Vector3(0, -props.cameraHeight / 2, 0)
+          }
+          key={axis}
+        >
+          <Text
             ref={(el) => {
-              textRefs.current.set(tickIndex, el as DreiTextRef);
+              textRefs.current.set(axis, el as DreiTextRef);
             }}
+            color={
+              props.theme === 'dark'
+                ? new THREE.Color(0.8, 0.8, 0.8)
+                : new THREE.Color(0.05, 0.05, 0.05)
+            }
+            position={
+              axis === 'y-axis'
+                ? new THREE.Vector3(10 / size.width, 0, 3)
+                : new THREE.Vector3(0, 10 / size.height, 3)
+            }
+            anchorY={axis === 'y-axis' ? 'middle' : 'bottom'}
+            anchorX={axis === 'y-axis' ? 'left' : 'center'}
+            fontSize={1}
           >
             0.0
           </Text>
@@ -269,17 +483,37 @@ const ControlsLockingHandler = (props: ControlsLockingHandlerProps) => {
   return <></>;
 };
 
-export type FilterResponseSceneProps = {
+type CameraBoundsFixProps = {
+  cameraWidth: number;
+  cameraHeight: number;
+};
+
+const CameraBoundsFix = (props: CameraBoundsFixProps) => {
+  const { camera } = useThree();
+
+  const typedCamera = camera as THREE.OrthographicCamera;
+  useFrame(() => {
+    typedCamera.left = -props.cameraWidth / 2;
+    typedCamera.right = props.cameraWidth / 2;
+    typedCamera.top = props.cameraHeight / 2;
+    typedCamera.bottom = -props.cameraHeight / 2;
+  });
+  return <></>;
+};
+
+export type ThreejsPlotProps = {
   xValues: number[];
   yValues: number[];
   theme: string;
 };
 
-export const ThreejsPlot = (props: FilterResponseSceneProps) => {
+export const ThreejsPlot = (props: ThreejsPlotProps) => {
   const cellSize = 0.05;
   const sectionSize = 0.2;
   const cameraWidth = 2.4;
   const cameraHeight = 2.4;
+  const xAxisThickness = 80;
+  const yAxisThickness = 150;
 
   const xScaleRange: [number, number] = [
     linearMap(-cameraWidth / 2, -1, 1, min(props.xValues), max(props.xValues)),
@@ -295,6 +529,7 @@ export const ThreejsPlot = (props: FilterResponseSceneProps) => {
   const [yAxisHovered, setYAxisHovered] = useState(false);
   const [pointerOverYAxis, setPointerOverYAxis] = useState(false);
   const [pointerDown, setPointerDown] = useState(false);
+  const [pointerOverCanvas, setPointerOverCanvas] = useState(false);
 
   const orbitControlsRef = useRef<OrbitControlsImpl>(null);
 
@@ -342,6 +577,12 @@ export const ThreejsPlot = (props: FilterResponseSceneProps) => {
   return (
     <Canvas
       className={`size-full bg-default-100 rounded-lg ${xAxisHovered ? 'cursor-ew-resize' : ''} ${yAxisHovered ? 'cursor-ns-resize' : ''}`}
+      onPointerEnter={() => {
+        setPointerOverCanvas(true);
+      }}
+      onPointerLeave={() => {
+        setPointerOverCanvas(false);
+      }}
       onPointerDown={() => {
         setPointerDown(true);
       }}
@@ -355,6 +596,7 @@ export const ThreejsPlot = (props: FilterResponseSceneProps) => {
         position={[0, 0, 10]}
         makeDefault
       />
+      <CameraBoundsFix cameraWidth={cameraWidth} cameraHeight={cameraHeight} />
       <OrbitControls
         ref={orbitControlsRef}
         mouseButtons={{ LEFT: THREE.MOUSE.PAN, MIDDLE: THREE.MOUSE.DOLLY }}
@@ -391,16 +633,30 @@ export const ThreejsPlot = (props: FilterResponseSceneProps) => {
         followCamera
         rotation={new THREE.Euler(Math.PI / 2, 0, 0)}
       />
+      <Crosshair
+        theme={props.theme}
+        renderPriority={3}
+        xLabelDecimalPlaces={3}
+        yLabelDecimalPlaces={2}
+        xScaleRange={xScaleRange}
+        yScaleRange={yScaleRange}
+        xAxisThickness={xAxisThickness}
+        yAxisThickness={yAxisThickness}
+        pointerOverCanvas={pointerOverCanvas}
+        axisHovered={xAxisHovered || yAxisHovered}
+        cameraWidth={cameraWidth}
+        cameraHeight={cameraHeight}
+      />
       <AxisOverlay
         theme={props.theme}
         renderPriority={1}
         axis={'x-axis'}
-        thickness={80}
+        thickness={xAxisThickness}
         tickSpacing={sectionSize}
         scaleRange={xScaleRange}
         cameraWidth={cameraWidth}
         cameraHeight={cameraHeight}
-        scaling='logarithmic'
+        labelDecimalPlaces={3}
         setPointerOverAxis={setPointerOverXAxis}
         hovered={xAxisHovered}
         setHovered={setXAxisHovered}
@@ -410,17 +666,18 @@ export const ThreejsPlot = (props: FilterResponseSceneProps) => {
         theme={props.theme}
         renderPriority={2}
         axis={'y-axis'}
-        thickness={150}
+        thickness={yAxisThickness}
         tickSpacing={sectionSize}
         scaleRange={yScaleRange}
         cameraWidth={cameraWidth}
         cameraHeight={cameraHeight}
-        scaling='logarithmic'
+        labelDecimalPlaces={2}
         setPointerOverAxis={setPointerOverYAxis}
         hovered={yAxisHovered}
         setHovered={setYAxisHovered}
         pointerDown={pointerDown}
       />
+      {/* Plot line */}
       <Line
         color={
           props.theme === 'dark'
