@@ -8,7 +8,6 @@ import {
 } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
-  addToast,
   Button,
   Card,
   CardBody,
@@ -28,13 +27,14 @@ import {
   Textarea,
 } from '@heroui/react';
 import { useTheme } from '@heroui/use-theme';
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { WindowMethodDesigner } from './WindowMethodDesigner';
 import { ThreejsPlot } from './ThreejsPlot';
 import { abs, BigNumber, fft, floor, log10, multiply, number } from 'mathjs';
 import { fftshift, linearMap } from './commonMath';
+import { Float16Array } from '@petamoriken/float16';
 
-export type OutputDatatype = 'float64';
+export type OutputDatatype = 'float64' | 'float32' | 'float16';
 
 export const App = () => {
   const { theme, setTheme } = useTheme('dark');
@@ -49,35 +49,37 @@ export const App = () => {
 
   const fftLengthScalar = 8;
 
+  const castFilterTaps = useMemo(() => {
+    switch (outputDatatype) {
+      case 'float64':
+        return new Float64Array(number(filterTaps) as number[]);
+      case 'float32':
+        return new Float32Array(number(filterTaps) as number[]);
+      case 'float16':
+        return new Float16Array(number(filterTaps) as number[]);
+    }
+  }, [filterTaps, outputDatatype]);
+
   const frequencyResponse = useMemo(
     () =>
-      filterTaps.length !== 0
+      castFilterTaps.length !== 0
         ? (abs(
             fftshift(
               fft(
-                Array(floor(filterTaps.length * (fftLengthScalar / 2)))
+                Array(floor(castFilterTaps.length * (fftLengthScalar / 2)))
                   .fill(0)
-                  .concat(number(filterTaps))
+                  .concat([...castFilterTaps])
                   .concat(
                     Array(
-                      floor(filterTaps.length * (fftLengthScalar / 2))
+                      floor(castFilterTaps.length * (fftLengthScalar / 2))
                     ).fill(0)
                   )
               )
             )
           ).map((mag) => multiply(20, log10(mag))) as number[])
         : [],
-    [filterTaps, fftLengthScalar]
+    [castFilterTaps, fftLengthScalar]
   );
-
-  useEffect(() => {
-    if (!filterDesignInProgress && filterTaps.length !== 0) {
-      addToast({
-        title: `Design finished! Tap count: ${filterTaps.length}`,
-        color: 'success',
-      });
-    }
-  }, [filterDesignInProgress, filterTaps.length, frequencyResponse]);
 
   return (
     <div className='size-full flex flex-col'>
@@ -119,6 +121,8 @@ export const App = () => {
               label='Output Tap Datatype'
             >
               <SelectItem key='float64'>Float64</SelectItem>
+              <SelectItem key='float32'>Float32</SelectItem>
+              <SelectItem key='float16'>Float16</SelectItem>
             </Select>
             <Select
               className='mt-2'
@@ -147,9 +151,9 @@ export const App = () => {
             )}
           </CardBody>
           <CardFooter className='flex flex-col gap-2'>
-            {filterTaps.length !== 0 && !filterDesignInProgress ? (
+            {castFilterTaps.length !== 0 && !filterDesignInProgress ? (
               <Chip variant='faded'>
-                Filter design finished! Number of taps: {filterTaps.length}.
+                Filter design finished! Number of taps: {castFilterTaps.length}.
               </Chip>
             ) : (
               <></>
@@ -180,7 +184,7 @@ export const App = () => {
                   </>
                 }
               >
-                {filterTaps.length === 0 ? (
+                {castFilterTaps.length === 0 ? (
                   <h1>Design a filter to view its frequency response.</h1>
                 ) : (
                   <ThreejsPlot
@@ -203,12 +207,12 @@ export const App = () => {
                   </>
                 }
               >
-                {filterTaps.length === 0 ? (
+                {castFilterTaps.length === 0 ? (
                   <h1>Design a filter to view its taps.</h1>
                 ) : (
                   <ThreejsPlot
-                    xValues={[...Array(filterTaps.length).keys()]}
-                    yValues={number(filterTaps) as number[]}
+                    xValues={[...Array(castFilterTaps.length).keys()]}
+                    yValues={[...castFilterTaps]}
                     theme={theme}
                   />
                 )}
@@ -229,8 +233,8 @@ export const App = () => {
                   isReadOnly
                   value={
                     '[' +
-                    filterTaps
-                      .map((v) => `${number(v).toString()}`)
+                    [...castFilterTaps]
+                      .map((v) => `${v.toString()}`)
                       .toString() +
                     ']'
                   }

@@ -311,12 +311,6 @@ const Crosshair = (props: CrosshairProps) => {
       }
 
       const textRef = textRefs.current.get(axis);
-      console.log(
-        'pointerY: ',
-        rootState.pointer.y,
-        ' cameraY: ',
-        rootState.camera.position.y
-      );
       const scaledValue =
         axis === 'y-axis'
           ? linearMap(
@@ -429,6 +423,30 @@ const Crosshair = (props: CrosshairProps) => {
           }
           key={axis}
         >
+          <Plane
+            args={
+              axis === 'y-axis'
+                ? [props.yAxisThickness / size.width, 50 / size.height, 2, 2]
+                : [140 / size.width, props.xAxisThickness / size.height, 2, 2]
+            }
+            position={
+              axis === 'y-axis'
+                ? new THREE.Vector3(props.yAxisThickness / size.width / 2, 0, 2)
+                : new THREE.Vector3(
+                    0,
+                    props.xAxisThickness / size.height / 2,
+                    2
+                  )
+            }
+          >
+            <meshBasicMaterial
+              color={
+                props.theme === 'dark'
+                  ? new THREE.Color(0.04, 0.04, 0.04)
+                  : new THREE.Color(0.9, 0.85, 0.85)
+              }
+            />
+          </Plane>
           <Text
             ref={(el) => {
               textRefs.current.set(axis, el as DreiTextRef);
@@ -576,7 +594,7 @@ export const ThreejsPlot = (props: ThreejsPlotProps) => {
 
   return (
     <Canvas
-      className={`size-full bg-default-100 rounded-lg ${xAxisHovered ? 'cursor-ew-resize' : ''} ${yAxisHovered ? 'cursor-ns-resize' : ''}`}
+      className={`size-full bg-default-100 rounded-lg ${!xAxisHovered && !yAxisHovered ? 'cursor-none' : ''} ${xAxisHovered ? 'cursor-ew-resize' : ''} ${yAxisHovered ? 'cursor-ns-resize' : ''}`}
       onPointerEnter={() => {
         setPointerOverCanvas(true);
       }}
@@ -643,7 +661,9 @@ export const ThreejsPlot = (props: ThreejsPlotProps) => {
         xAxisThickness={xAxisThickness}
         yAxisThickness={yAxisThickness}
         pointerOverCanvas={pointerOverCanvas}
-        axisHovered={xAxisHovered || yAxisHovered}
+        axisHovered={
+          xAxisHovered || yAxisHovered || pointerOverXAxis || pointerOverYAxis
+        }
         cameraWidth={cameraWidth}
         cameraHeight={cameraHeight}
       />

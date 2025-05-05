@@ -1,4 +1,4 @@
-import { NumberInput } from '@heroui/react';
+import { addToast, NumberInput } from '@heroui/react';
 import { bignumber, BigNumber } from 'mathjs';
 import { useEffect } from 'react';
 import * as React from 'react';
@@ -62,6 +62,10 @@ export const WindowMethodDesigner = (
               props.setFilterTaps(taps);
               props.setFilterDesignInProgress(false);
               windowDesignWorker.terminate();
+              addToast({
+                title: `Design finished! Tap count: ${taps.length}`,
+                color: 'success',
+              });
               break;
             }
             default:
