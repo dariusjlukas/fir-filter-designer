@@ -1,4 +1,5 @@
 import {
+  add,
   bignumber,
   BigNumber,
   Complex,
@@ -94,7 +95,7 @@ export const createKaiserLowpassFilter = (
     2 *
       (typeof parameters.cutoffFreq === 'number'
         ? parameters.cutoffFreq
-        : parameters.cutoffFreq[1] - parameters.cutoffFreq[0]) *
+        : (parameters.cutoffFreq[1] - parameters.cutoffFreq[0]) / 2) *
       (n - (N - 1) / 2) ===
     0
       ? bignumber(1)
@@ -103,7 +104,7 @@ export const createKaiserLowpassFilter = (
             2 *
               (typeof parameters.cutoffFreq === 'number'
                 ? parameters.cutoffFreq
-                : parameters.cutoffFreq[1] - parameters.cutoffFreq[0]) *
+                : (parameters.cutoffFreq[1] - parameters.cutoffFreq[0]) / 2) *
               (n - (N - 1) / 2)
           )
         )
@@ -121,6 +122,33 @@ export const createKaiserLowpassFilter = (
   const h_sum = sum(h);
   const lowpass = h.map((v) => divide(v, h_sum) as BigNumber);
 
+  const bandpass = (() => {
+    if (typeof parameters.cutoffFreq === 'object') {
+      const shiftedSignal = lowpass.map((v, n) =>
+        multiply(
+          v,
+          exp(
+            complex(
+              0,
+              2 *
+                pi *
+                (((parameters.cutoffFreq as [number, number])[1] -
+                  (parameters.cutoffFreq as [number, number])[0]) /
+                  2 +
+                  (parameters.cutoffFreq as [number, number])[0]) *
+                n
+            )
+          )
+        )
+      ) as Complex[];
+      return shiftedSignal.map((v) =>
+        multiply(bignumber(v.re), bignumber(2))
+      ) as BigNumber[];
+    } else {
+      return [bignumber(0)];
+    }
+  })();
+
   switch (filterType) {
     case 'lowpass':
       return lowpass;
@@ -129,22 +157,13 @@ export const createKaiserLowpassFilter = (
         i === (lowpass.length - 1) / 2 ? multiply(v, bignumber(-1)) : v
       ) as BigNumber[];
     case 'bandpass': {
-      const shiftedSignal = lowpass.map((v, n) =>
-        multiply(
-          v,
-          exp(
-            complex(
-              0,
-              2 * pi * (parameters.cutoffFreq as [number, number])[0] * n
-            )
-          )
-        )
-      ) as Complex[];
-      return shiftedSignal.map((v) =>
-        multiply(bignumber(v.re), bignumber(2))
-      ) as BigNumber[];
+      return bandpass;
     }
     case 'bandstop':
-      return lowpass; //TODO
+      return bandpass.map((v, i) =>
+        i === (bandpass.length - 1) / 2
+          ? add(multiply(v, bignumber(-1)), bignumber(1))
+          : v
+      ) as BigNumber[];
   }
 };
