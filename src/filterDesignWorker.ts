@@ -3,6 +3,7 @@ import {
   createKaiserLowpassFilter,
   KaiserDesignParams,
 } from './filterDesignFunctions';
+import { FilterType, TapNumericType } from './App';
 
 export type FilterDesignWorkerOutboundMessage = {
   messageType: 'filter taps';
@@ -16,6 +17,8 @@ export type FilterDesignWorkerInboundMessage = {
 
 export type FilterDesignRequest = {
   designMethod: 'window' | 'parksMcClellan';
+  filterType: FilterType;
+  tapNumericType: TapNumericType;
   parameters: WindowDesignRequest | ParksMcClellanDesignRequest;
 };
 
@@ -35,6 +38,8 @@ onmessage = (m: MessageEvent<FilterDesignWorkerInboundMessage>) => {
         const windowDesignRequest =
           filterDesignRequest.parameters as WindowDesignRequest;
         const filterTaps = createKaiserLowpassFilter(
+          filterDesignRequest.filterType,
+          filterDesignRequest.tapNumericType,
           windowDesignRequest.windowParameters
         );
         const responseMessage: FilterDesignWorkerOutboundMessage = {

@@ -35,6 +35,8 @@ import { fftshift, linearMap } from './commonMath';
 import { Float16Array } from '@petamoriken/float16';
 
 export type OutputDatatype = 'float64' | 'float32' | 'float16';
+export type FilterType = 'lowpass' | 'highpass' | 'bandpass' | 'bandstop';
+export type TapNumericType = 'real' | 'complex';
 
 export const App = () => {
   const { theme, setTheme } = useTheme('dark');
@@ -46,6 +48,8 @@ export const App = () => {
   );
   const [outputDatatype, setOutputDatatype] =
     useState<OutputDatatype>('float64');
+  const [filterType, setFilterType] = useState<FilterType>('lowpass');
+  const [tapNumericType, setTapNumericType] = useState<TapNumericType>('real');
 
   const fftLengthScalar = 8;
 
@@ -104,13 +108,46 @@ export const App = () => {
           />
         </NavbarContent>
       </Navbar>
-      <div className='h-full grid grid-cols-4 gap-2 content-stretch p-1 '>
+      <div className='h-full overflow-hidden grid grid-cols-4 gap-2 content-stretch p-1 '>
         <Card>
           <CardHeader>
             <h1>Filter Settings</h1>
           </CardHeader>
           <CardBody>
             <Select
+              size='sm'
+              isDisabled={filterDesignInProgress}
+              disallowEmptySelection={true}
+              selectedKeys={[filterType]}
+              onSelectionChange={(keys) =>
+                setFilterType(keys.currentKey as FilterType)
+              }
+              selectionMode='single'
+              label='Filter Type'
+            >
+              <SelectItem key='lowpass'>Low-pass</SelectItem>
+              <SelectItem key='highpass'>High-pass</SelectItem>
+              <SelectItem key='bandpass'>Band-pass</SelectItem>
+              <SelectItem key='bandstop'>Band-stop</SelectItem>
+            </Select>
+            <Select
+              className='mt-2'
+              size='sm'
+              isDisabled={filterDesignInProgress}
+              disallowEmptySelection={true}
+              selectedKeys={[tapNumericType]}
+              onSelectionChange={(keys) =>
+                setTapNumericType(keys.currentKey as TapNumericType)
+              }
+              selectionMode='single'
+              label='Tap Numeric Type'
+            >
+              <SelectItem key='real'>Real</SelectItem>
+              <SelectItem key='complex'>Complex</SelectItem>
+            </Select>
+            <Select
+              className='mt-2'
+              size='sm'
               isDisabled={filterDesignInProgress}
               disallowEmptySelection={true}
               selectedKeys={[outputDatatype]}
@@ -118,7 +155,7 @@ export const App = () => {
                 setOutputDatatype(keys.currentKey as OutputDatatype)
               }
               selectionMode='single'
-              label='Output Tap Datatype'
+              label='Tap Datatype'
             >
               <SelectItem key='float64'>Float64</SelectItem>
               <SelectItem key='float32'>Float32</SelectItem>
@@ -126,6 +163,7 @@ export const App = () => {
             </Select>
             <Select
               className='mt-2'
+              size='sm'
               isDisabled={filterDesignInProgress}
               selectedKeys={designMethod}
               onSelectionChange={setDesignMethod}
@@ -140,6 +178,8 @@ export const App = () => {
             ) : designMethod.currentKey === 'kaiserWindow' ? (
               <WindowMethodDesigner
                 className='mt-2'
+                filterType={filterType}
+                tapNumericType={tapNumericType}
                 setFilterTaps={setFilterTaps}
                 filterDesignInProgress={filterDesignInProgress}
                 setFilterDesignInProgress={setFilterDesignInProgress}
@@ -185,21 +225,48 @@ export const App = () => {
                 }
               >
                 {castFilterTaps.length === 0 ? (
-                  <h1>Design a filter to view its frequency response.</h1>
+                  <div className='size-full content-center text-center border-2 border-dashed rounded-lg'>
+                    <div>Design a filter to view its frequency response.</div>
+                  </div>
                 ) : (
                   <ThreejsPlot
-                    xValues={[...Array(frequencyResponse.length).keys()].map(
-                      (v) =>
-                        linearMap(v, 0, frequencyResponse.length, -0.5, 0.5)
-                    )}
-                    yValues={frequencyResponse}
+                    xValues={
+                      tapNumericType === 'complex'
+                        ? [...Array(frequencyResponse.length).keys()].map((v) =>
+                            linearMap(
+                              v,
+                              0,
+                              frequencyResponse.length - 1,
+                              -0.5,
+                              0.5
+                            )
+                          )
+                        : [
+                            ...Array((frequencyResponse.length + 1) / 2).keys(),
+                          ].map((v) =>
+                            linearMap(
+                              v,
+                              0,
+                              (frequencyResponse.length + 1) / 2 - 1,
+                              0,
+                              0.5
+                            )
+                          )
+                    }
+                    yValues={
+                      tapNumericType === 'complex'
+                        ? frequencyResponse
+                        : frequencyResponse.slice(
+                            (frequencyResponse.length + 1) / 2
+                          )
+                    }
                     theme={theme}
                   />
                 )}
               </Tab>
               <Tab
                 className='h-full'
-                key='Taps'
+                key='Tap Plot'
                 title={
                   <>
                     <FontAwesomeIcon icon={faChartLine} />{' '}
@@ -208,7 +275,9 @@ export const App = () => {
                 }
               >
                 {castFilterTaps.length === 0 ? (
-                  <h1>Design a filter to view its taps.</h1>
+                  <div className='size-full content-center text-center border-2 border-dashed rounded-lg'>
+                    <div>Design a filter to view its taps.</div>
+                  </div>
                 ) : (
                   <ThreejsPlot
                     xValues={[...Array(castFilterTaps.length).keys()]}
@@ -219,7 +288,7 @@ export const App = () => {
               </Tab>
               <Tab
                 className='h-full'
-                key='Code'
+                key='Taps'
                 title={
                   <>
                     <FontAwesomeIcon icon={faList} />{' '}
@@ -227,6 +296,11 @@ export const App = () => {
                   </>
                 }
               >
+                <h1 className='p-2'>
+                  {tapNumericType === 'complex'
+                    ? 'Note: Tap data is formatted [real, imaginary].'
+                    : ''}
+                </h1>
                 <Textarea
                   maxRows={30}
                   variant='bordered'

@@ -7,30 +7,49 @@ import {
   FilterDesignWorkerInboundMessage,
   FilterDesignWorkerOutboundMessage,
 } from './filterDesignWorker';
-import {
-  createKaiserLowpassFilter,
-  KaiserDesignParams,
-} from './filterDesignFunctions';
+import { KaiserDesignParams } from './filterDesignFunctions';
+import { FilterType, TapNumericType } from './App';
 
 export type WindowMethodDesignerProps = {
   className: string | undefined;
+  filterType: FilterType;
+  tapNumericType: TapNumericType;
   setFilterTaps: React.Dispatch<React.SetStateAction<BigNumber[]>>;
   filterDesignInProgress: boolean;
   setFilterDesignInProgress: React.Dispatch<React.SetStateAction<boolean>>;
+};
+
+const defaultLowpassParams = {
+  cutoffFreq: 0.25,
+  transitionBandwidth: 0.05,
+  minStopbandAttenuation: 60,
+  maxPassbandRipple: 0.01,
+  besselMaxIterations: 1000,
+  besselDecimalPlaces: 14,
+};
+
+const defaultBandpassParams = {
+  cutoffFreq: [0.15, 0.4] as [number, number],
+  transitionBandwidth: 0.05,
+  minStopbandAttenuation: 60,
+  maxPassbandRipple: 0.01,
+  besselMaxIterations: 1000,
+  besselDecimalPlaces: 14,
 };
 
 export const WindowMethodDesigner = (
   props: WindowMethodDesignerProps
 ): React.ReactNode => {
   const [kaiserDesignParams, setKaiserDesignParams] =
-    useImmer<KaiserDesignParams>({
-      cutoffFreq: 0.25,
-      transitionBandwidth: 0.05,
-      minStopbandAttenuation: 60,
-      maxPassbandRipple: 0.01,
-      besselMaxIterations: 1000,
-      besselDecimalPlaces: 14,
-    });
+    useImmer<KaiserDesignParams>(defaultLowpassParams);
+
+  useEffect(() => {
+    if (props.filterType === 'lowpass' || props.filterType === 'highpass') {
+      setKaiserDesignParams(defaultLowpassParams);
+    } else {
+      setKaiserDesignParams(defaultBandpassParams);
+    }
+  }, [props.filterType, setKaiserDesignParams]);
 
   //Design a filter when requested
   useEffect(() => {
@@ -44,6 +63,8 @@ export const WindowMethodDesigner = (
           messageType: 'filter design request',
           payload: {
             designMethod: 'window',
+            filterType: props.filterType,
+            tapNumericType: props.tapNumericType,
             parameters: {
               windowParameters: kaiserDesignParams,
             },
@@ -77,9 +98,7 @@ export const WindowMethodDesigner = (
         };
         windowDesignWorker.postMessage(filterDesignMessage);
       } else {
-        const filterTaps = createKaiserLowpassFilter(kaiserDesignParams);
-        props.setFilterTaps(filterTaps);
-        props.setFilterDesignInProgress(false);
+        console.error('Failed to create Web Worker!');
       }
     }
   }, [
@@ -93,18 +112,47 @@ export const WindowMethodDesigner = (
   return (
     <div className={props.className + ' flex flex-col gap-2'}>
       <div className='flex flex-col gap-1 p-1 border-2 border-dashed border-default/80 rounded-lg'>
-        <NumberInput
-          isWheelDisabled
-          isDisabled={props.filterDesignInProgress}
-          value={kaiserDesignParams.cutoffFreq}
-          onValueChange={(value) =>
-            setKaiserDesignParams((draft) => {
-              draft.cutoffFreq = value;
-            })
-          }
-          size='sm'
-          label='Cutoff Frequency'
-        />
+        {props.filterType === 'lowpass' || props.filterType === 'highpass' ? (
+          <NumberInput
+            isWheelDisabled
+            isDisabled={props.filterDesignInProgress}
+            value={kaiserDesignParams.cutoffFreq as number}
+            onValueChange={(value) =>
+              setKaiserDesignParams((draft) => {
+                draft.cutoffFreq = value;
+              })
+            }
+            size='sm'
+            label='Cutoff Frequency'
+          />
+        ) : (
+          <>
+            <NumberInput
+              isWheelDisabled
+              isDisabled={props.filterDesignInProgress}
+              value={(kaiserDesignParams.cutoffFreq as [number, number])[0]}
+              onValueChange={(value) =>
+                setKaiserDesignParams((draft) => {
+                  (draft.cutoffFreq as [number, number])[0] = value;
+                })
+              }
+              size='sm'
+              label='Lower Cutoff Frequency'
+            />
+            <NumberInput
+              isWheelDisabled
+              isDisabled={props.filterDesignInProgress}
+              value={(kaiserDesignParams.cutoffFreq as [number, number])[1]}
+              onValueChange={(value) =>
+                setKaiserDesignParams((draft) => {
+                  (draft.cutoffFreq as [number, number])[1] = value;
+                })
+              }
+              size='sm'
+              label='Upper Cutoff Frequency'
+            />
+          </>
+        )}
         <NumberInput
           isWheelDisabled
           isDisabled={props.filterDesignInProgress}

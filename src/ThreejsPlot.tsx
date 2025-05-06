@@ -150,20 +150,24 @@ const AxisOverlay = (props: AxisOverlayProps) => {
         position={
           props.axis === 'y-axis'
             ? new THREE.Vector3(
-                -cameraOffAxisLength / 2 + props.thickness / size.width / 2,
+                -cameraOffAxisLength / 2 +
+                  props.thickness / size.width / 2 -
+                  0.05,
                 0,
                 1
               )
             : new THREE.Vector3(
                 0,
-                -cameraOffAxisLength / 2 + props.thickness / size.height / 2,
+                -cameraOffAxisLength / 2 +
+                  props.thickness / size.height / 2 -
+                  0.05,
                 1
               )
         }
         args={
           props.axis == 'y-axis'
-            ? [props.thickness / size.width, cameraInlineLength, 2, 2]
-            : [cameraInlineLength, props.thickness / size.height, 2, 2]
+            ? [props.thickness / size.width + 0.1, cameraInlineLength, 2, 2]
+            : [cameraInlineLength, props.thickness / size.height + 0.1, 2, 2]
         }
       >
         <meshBasicMaterial
