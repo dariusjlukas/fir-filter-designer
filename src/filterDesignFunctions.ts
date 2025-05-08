@@ -90,25 +90,6 @@ export const createKaiserLowpassFilter = (
   if (N % 2 === 0) {
     N++;
   }
-
-  const sampledSinc: BigNumber[] = [...Array(N).keys()].map((n) =>
-    2 *
-      (typeof parameters.cutoffFreq === 'number'
-        ? parameters.cutoffFreq
-        : (parameters.cutoffFreq[1] - parameters.cutoffFreq[0]) / 2) *
-      (n - (N - 1) / 2) ===
-    0
-      ? bignumber(1)
-      : sinc(
-          bignumber(
-            2 *
-              (typeof parameters.cutoffFreq === 'number'
-                ? parameters.cutoffFreq
-                : (parameters.cutoffFreq[1] - parameters.cutoffFreq[0]) / 2) *
-              (n - (N - 1) / 2)
-          )
-        )
-  );
   const kaiserWindow = calcKaiserWindow(
     beta,
     N,
@@ -116,30 +97,32 @@ export const createKaiserLowpassFilter = (
     bignumber(`1.0e-${parameters.besselDecimalPlaces}`)
   );
 
-  const h = sampledSinc.map(
-    (sample, index) => multiply(sample, kaiserWindow[index]) as BigNumber
-  );
-  const h_sum = sum(h);
-  const lowpass = h.map((v) => divide(v, h_sum) as BigNumber);
+  const designLowpass = (cutoff: number) => {
+    const sampledSinc: BigNumber[] = [...Array(N).keys()].map((n) =>
+      2 * cutoff * (n - (N - 1) / 2) === 0
+        ? bignumber(1)
+        : sinc(bignumber(2 * cutoff * (n - (N - 1) / 2)))
+    );
 
-  const bandpass = (() => {
+    const h = sampledSinc.map(
+      (sample, index) => multiply(sample, kaiserWindow[index]) as BigNumber
+    );
+    const h_sum = sum(h);
+    return h.map((v) => divide(v, h_sum) as BigNumber);
+  };
+
+  const spectralInvert = (input: BigNumber[]) => {
+    return input.map((v, i) =>
+      i === (input.length - 1) / 2
+        ? add(1, multiply(bignumber(-1), v))
+        : multiply(bignumber(-1), v)
+    ) as BigNumber[];
+  };
+
+  const heterodyneFilter = (input: BigNumber[], shiftAmount: number) => {
     if (typeof parameters.cutoffFreq === 'object') {
-      const shiftedSignal = lowpass.map((v, n) =>
-        multiply(
-          v,
-          exp(
-            complex(
-              0,
-              2 *
-                pi *
-                (((parameters.cutoffFreq as [number, number])[1] -
-                  (parameters.cutoffFreq as [number, number])[0]) /
-                  2 +
-                  (parameters.cutoffFreq as [number, number])[0]) *
-                n
-            )
-          )
-        )
+      const shiftedSignal = input.map((v, n) =>
+        multiply(v, exp(complex(0, 2 * pi * shiftAmount * n)))
       ) as Complex[];
       return shiftedSignal.map((v) =>
         multiply(bignumber(v.re), bignumber(2))
@@ -147,23 +130,39 @@ export const createKaiserLowpassFilter = (
     } else {
       return [bignumber(0)];
     }
-  })();
+  };
 
   switch (filterType) {
     case 'lowpass':
-      return lowpass;
+      return designLowpass(parameters.cutoffFreq as number);
     case 'highpass':
-      return lowpass.map((v, i) =>
-        i === (lowpass.length - 1) / 2 ? multiply(v, bignumber(-1)) : v
-      ) as BigNumber[];
-    case 'bandpass': {
-      return bandpass;
+      return spectralInvert(designLowpass(parameters.cutoffFreq as number));
+    case 'bandpass':
+      return heterodyneFilter(
+        designLowpass(
+          ((parameters.cutoffFreq as [number, number])[1] -
+            (parameters.cutoffFreq as [number, number])[0]) /
+            2
+        ),
+        ((parameters.cutoffFreq as [number, number])[1] -
+          (parameters.cutoffFreq as [number, number])[0]) /
+          2 +
+          (parameters.cutoffFreq as [number, number])[0]
+      );
+    case 'bandstop': {
+      const lowpass = designLowpass(
+        (parameters.cutoffFreq as [number, number])[0]
+      );
+      const highpass = spectralInvert(
+        designLowpass((parameters.cutoffFreq as [number, number])[1])
+      );
+      return lowpass.map((v, i) => add(v, highpass[i]));
     }
-    case 'bandstop':
-      return bandpass.map((v, i) =>
-        i === (bandpass.length - 1) / 2
-          ? add(multiply(v, bignumber(-1)), bignumber(1))
-          : v
-      ) as BigNumber[];
+    // return heterodyneFilter(spectralInvert(lowpass), (((parameters.cutoffFreq as [number, number])[1] - (parameters.cutoffFreq as [number, number])[0]) / 2 +
+    // (parameters.cutoffFreq as [number, number])[0]));
+    // return spectralInvert(
+    //   heterodyneFilter(lowpass, (((parameters.cutoffFreq as [number, number])[1] - (parameters.cutoffFreq as [number, number])[0]) / 2 +
+    // (parameters.cutoffFreq as [number, number])[0]))
+    // )
   }
 };
