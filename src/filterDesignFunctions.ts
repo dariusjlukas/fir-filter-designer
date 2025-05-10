@@ -76,11 +76,11 @@ export const estimateKaiserTapCount = (
   transitionBandwidth: number
 ) => floor((A - 8) / (2.285 * 2 * pi * transitionBandwidth)) + 1;
 
-export const createKaiserLowpassFilter = (
+export const createKaiserFilter = (
   filterType: FilterType,
   tapNumericType: TapNumericType,
   parameters: KaiserDesignParams
-): BigNumber[] => {
+): BigNumber[] | Complex[] => {
   const A = max(
     parameters.minStopbandAttenuation,
     20 * log10(10 ** (parameters.maxPassbandRipple / 20) - 1)
@@ -119,14 +119,22 @@ export const createKaiserLowpassFilter = (
     ) as BigNumber[];
   };
 
-  const heterodyneFilter = (input: BigNumber[], shiftAmount: number) => {
+  const heterodyneFilter = (
+    input: BigNumber[],
+    shiftAmount: number,
+    tapNumericType: TapNumericType
+  ) => {
     if (typeof parameters.cutoffFreq === 'object') {
       const shiftedSignal = input.map((v, n) =>
         multiply(v, exp(complex(0, 2 * pi * shiftAmount * n)))
       ) as Complex[];
-      return shiftedSignal.map((v) =>
-        multiply(bignumber(v.re), bignumber(2))
-      ) as BigNumber[];
+      if (tapNumericType === 'real') {
+        return shiftedSignal.map((v) =>
+          multiply(bignumber(v.re), bignumber(2))
+        ) as BigNumber[];
+      } else {
+        return shiftedSignal;
+      }
     } else {
       return [bignumber(0)];
     }
@@ -147,7 +155,8 @@ export const createKaiserLowpassFilter = (
         ((parameters.cutoffFreq as [number, number])[1] -
           (parameters.cutoffFreq as [number, number])[0]) /
           2 +
-          (parameters.cutoffFreq as [number, number])[0]
+          (parameters.cutoffFreq as [number, number])[0],
+        tapNumericType
       );
     case 'bandstop': {
       const lowpass = designLowpass(

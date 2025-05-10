@@ -1,5 +1,5 @@
 import { addToast, NumberInput } from '@heroui/react';
-import { bignumber, BigNumber } from 'mathjs';
+import { bignumber, BigNumber, complex, Complex } from 'mathjs';
 import { useEffect } from 'react';
 import * as React from 'react';
 import { useImmer } from 'use-immer';
@@ -10,11 +10,14 @@ import {
 import { KaiserDesignParams } from './filterDesignFunctions';
 import { FilterType, TapNumericType } from './App';
 
+type DeserializedBigNumber = { mathjs: string; value: string };
+type DeserializedComplex = { mathjs: string; re: number; im: number };
+
 export type WindowMethodDesignerProps = {
   className: string | undefined;
   filterType: FilterType;
   tapNumericType: TapNumericType;
-  setFilterTaps: React.Dispatch<React.SetStateAction<BigNumber[]>>;
+  setFilterTaps: React.Dispatch<React.SetStateAction<BigNumber[] | Complex[]>>;
   filterDesignInProgress: boolean;
   setFilterDesignInProgress: React.Dispatch<React.SetStateAction<boolean>>;
 };
@@ -73,13 +76,21 @@ export const WindowMethodDesigner = (
         windowDesignWorker.onmessage = (m: MessageEvent<string>) => {
           const workerMessage = JSON.parse(m.data) as {
             messageType: FilterDesignWorkerOutboundMessage['messageType'];
-            payload: { mathjs: string; value: string }[];
+            payload: DeserializedBigNumber[] | DeserializedComplex[];
           };
           switch (workerMessage.messageType) {
             case 'filter taps': {
-              const taps = workerMessage.payload.map(
-                (v: { mathjs: string; value: string }) => bignumber(v.value)
-              );
+              const taps =
+                workerMessage.payload[0].mathjs === 'BigNumber'
+                  ? workerMessage.payload.map((v) =>
+                      bignumber((v as DeserializedBigNumber).value)
+                    )
+                  : workerMessage.payload.map((v) =>
+                      complex(
+                        (v as DeserializedComplex).re,
+                        (v as DeserializedComplex).im
+                      )
+                    );
               props.setFilterTaps(taps);
               props.setFilterDesignInProgress(false);
               windowDesignWorker.terminate();
@@ -116,7 +127,7 @@ export const WindowMethodDesigner = (
           <NumberInput
             isWheelDisabled
             isDisabled={props.filterDesignInProgress}
-            value={kaiserDesignParams.cutoffFreq as number}
+            value={(kaiserDesignParams.cutoffFreq as number) ?? null}
             onValueChange={(value) =>
               setKaiserDesignParams((draft) => {
                 draft.cutoffFreq = value;
@@ -130,7 +141,9 @@ export const WindowMethodDesigner = (
             <NumberInput
               isWheelDisabled
               isDisabled={props.filterDesignInProgress}
-              value={(kaiserDesignParams.cutoffFreq as [number, number])[0]}
+              value={
+                (kaiserDesignParams.cutoffFreq as [number, number])[0] ?? null
+              }
               onValueChange={(value) =>
                 setKaiserDesignParams((draft) => {
                   (draft.cutoffFreq as [number, number])[0] = value;
@@ -142,7 +155,9 @@ export const WindowMethodDesigner = (
             <NumberInput
               isWheelDisabled
               isDisabled={props.filterDesignInProgress}
-              value={(kaiserDesignParams.cutoffFreq as [number, number])[1]}
+              value={
+                (kaiserDesignParams.cutoffFreq as [number, number])[1] ?? null
+              }
               onValueChange={(value) =>
                 setKaiserDesignParams((draft) => {
                   (draft.cutoffFreq as [number, number])[1] = value;
@@ -156,7 +171,7 @@ export const WindowMethodDesigner = (
         <NumberInput
           isWheelDisabled
           isDisabled={props.filterDesignInProgress}
-          value={kaiserDesignParams.transitionBandwidth}
+          value={kaiserDesignParams.transitionBandwidth ?? null}
           onValueChange={(value) =>
             setKaiserDesignParams((draft) => {
               draft.transitionBandwidth = value;
@@ -168,7 +183,7 @@ export const WindowMethodDesigner = (
         <NumberInput
           isWheelDisabled
           isDisabled={props.filterDesignInProgress}
-          value={kaiserDesignParams.minStopbandAttenuation}
+          value={kaiserDesignParams.minStopbandAttenuation ?? null}
           onValueChange={(value) =>
             setKaiserDesignParams((draft) => {
               draft.minStopbandAttenuation = value;
@@ -180,7 +195,7 @@ export const WindowMethodDesigner = (
         <NumberInput
           isWheelDisabled
           isDisabled={props.filterDesignInProgress}
-          value={kaiserDesignParams.maxPassbandRipple}
+          value={kaiserDesignParams.maxPassbandRipple ?? null}
           onValueChange={(value) =>
             setKaiserDesignParams((draft) => {
               draft.maxPassbandRipple = value;
@@ -192,7 +207,7 @@ export const WindowMethodDesigner = (
         <NumberInput
           isWheelDisabled
           isDisabled={props.filterDesignInProgress}
-          value={kaiserDesignParams.besselMaxIterations}
+          value={kaiserDesignParams.besselMaxIterations ?? null}
           onValueChange={(value) =>
             setKaiserDesignParams((draft) => {
               draft.besselMaxIterations = value;
@@ -200,18 +215,6 @@ export const WindowMethodDesigner = (
           }
           size='sm'
           label='Max Bessel Calculation Iterations'
-        />
-        <NumberInput
-          isWheelDisabled
-          isDisabled={props.filterDesignInProgress}
-          value={kaiserDesignParams.besselDecimalPlaces}
-          onValueChange={(value) =>
-            setKaiserDesignParams((draft) => {
-              draft.besselDecimalPlaces = value;
-            })
-          }
-          size='sm'
-          label='Desired Number of Bessel Function Decimal Places'
         />
       </div>
     </div>

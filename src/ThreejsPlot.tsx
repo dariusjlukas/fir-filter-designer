@@ -1,6 +1,7 @@
 /* eslint-disable react/no-unknown-property */
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import {
+  Circle,
   Grid,
   Hud,
   Line,
@@ -21,6 +22,15 @@ import {
 import { max, min } from 'mathjs';
 import { linearMap } from './commonMath';
 import { Line2, OrbitControls as OrbitControlsImpl } from 'three-stdlib';
+
+const lightModeLineColors = [
+  new THREE.Color(0, 0.2, 1),
+  new THREE.Color(1, 0.2, 0),
+];
+const darkModeLineColors = [
+  new THREE.Color(0, 0.4, 1),
+  new THREE.Color(1, 0.4, 0),
+];
 
 type AxisOverlayProps = {
   renderPriority: number;
@@ -505,6 +515,113 @@ const ControlsLockingHandler = (props: ControlsLockingHandlerProps) => {
   return <></>;
 };
 
+type DataDisplayProps = {
+  plotType: 'line' | 'point';
+  theme: string;
+  xValues: number[];
+  yValues: number[][];
+};
+
+const DataDisplay = (props: DataDisplayProps) => {
+  const { size } = useThree();
+
+  const plotPoints = useMemo(() => {
+    const plotPointsArray: THREE.Vector3[][] = [];
+    // Initialize plot points array
+    props.yValues.forEach(() => plotPointsArray.push([]));
+    for (
+      let xValuesIndex = 0;
+      xValuesIndex < props.xValues.length;
+      xValuesIndex++
+    ) {
+      props.yValues.forEach((yValueArray, yValuesIndex) =>
+        plotPointsArray[yValuesIndex].push(
+          new THREE.Vector3(
+            linearMap(
+              props.xValues[xValuesIndex],
+              min(props.xValues),
+              max(props.xValues),
+              -1,
+              1
+            ),
+            linearMap(
+              yValueArray[xValuesIndex],
+              min(props.yValues.flat()),
+              max(props.yValues.flat()),
+              -1,
+              1
+            ),
+            0.01
+          )
+        )
+      );
+    }
+    return plotPointsArray;
+  }, [props.xValues, props.yValues]);
+
+  return (
+    <>
+      {/* Plot data set(s) */}
+      {plotPoints.map((linePoints, i) =>
+        props.plotType === 'line' ? (
+          <Line
+            key={i}
+            color={
+              props.theme === 'dark'
+                ? darkModeLineColors[i]
+                : lightModeLineColors[i]
+            }
+            lineWidth={3}
+            points={linePoints}
+          />
+        ) : (
+          linePoints.map((point, pointIndex) => (
+            <>
+              <Line
+                key={'line-' + pointIndex}
+                points={[
+                  new THREE.Vector3(
+                    point.x,
+                    linearMap(
+                      0,
+                      min(props.yValues.flat()),
+                      max(props.yValues.flat()),
+                      -1,
+                      1
+                    ),
+                    point.z
+                  ),
+                  new THREE.Vector3(point.x, point.y, point.z),
+                ]}
+                color={
+                  props.theme === 'dark'
+                    ? darkModeLineColors[i]
+                    : lightModeLineColors[i]
+                }
+                lineWidth={2}
+              />
+              <Circle
+                key={'circle-' + pointIndex}
+                position={point}
+                args={[1, 16]}
+                scale={[10 / size.width, 10 / size.height, 1]}
+              >
+                <meshBasicMaterial
+                  color={
+                    props.theme === 'dark'
+                      ? darkModeLineColors[i]
+                      : lightModeLineColors[i]
+                  }
+                />
+              </Circle>
+            </>
+          ))
+        )
+      )}
+    </>
+  );
+};
+
 type CameraBoundsFixProps = {
   cameraWidth: number;
   cameraHeight: number;
@@ -525,8 +642,9 @@ const CameraBoundsFix = (props: CameraBoundsFixProps) => {
 
 export type ThreejsPlotProps = {
   xValues: number[];
-  yValues: number[];
+  yValues: number[][];
   theme: string;
+  plotType: 'line' | 'point';
 };
 
 export const ThreejsPlot = (props: ThreejsPlotProps) => {
@@ -542,8 +660,20 @@ export const ThreejsPlot = (props: ThreejsPlotProps) => {
     linearMap(cameraWidth / 2, -1, 1, min(props.xValues), max(props.xValues)),
   ];
   const yScaleRange: [number, number] = [
-    linearMap(-cameraHeight / 2, -1, 1, min(props.yValues), max(props.yValues)),
-    linearMap(cameraHeight / 2, -1, 1, min(props.yValues), max(props.yValues)),
+    linearMap(
+      -cameraHeight / 2,
+      -1,
+      1,
+      min(props.yValues) as number,
+      max(props.yValues) as number
+    ),
+    linearMap(
+      cameraHeight / 2,
+      -1,
+      1,
+      min(props.yValues) as number,
+      max(props.yValues) as number
+    ),
   ];
 
   const [xAxisHovered, setXAxisHovered] = useState(false);
@@ -554,25 +684,6 @@ export const ThreejsPlot = (props: ThreejsPlotProps) => {
   const [pointerOverCanvas, setPointerOverCanvas] = useState(false);
 
   const orbitControlsRef = useRef<OrbitControlsImpl>(null);
-
-  const plotPoints = useMemo(
-    () =>
-      props.xValues.map(
-        (xValue, index) =>
-          new THREE.Vector3(
-            linearMap(xValue, min(props.xValues), max(props.xValues), -1, 1),
-            linearMap(
-              props.yValues[index],
-              min(props.yValues),
-              max(props.yValues),
-              -1,
-              1
-            ),
-            0.01
-          )
-      ),
-    [props.xValues, props.yValues]
-  );
 
   const handlePointerUp = useCallback(() => {
     setPointerDown(false);
@@ -701,15 +812,11 @@ export const ThreejsPlot = (props: ThreejsPlotProps) => {
         setHovered={setYAxisHovered}
         pointerDown={pointerDown}
       />
-      {/* Plot line */}
-      <Line
-        color={
-          props.theme === 'dark'
-            ? new THREE.Color(0, 0.4, 1)
-            : new THREE.Color(0, 0.2, 1)
-        }
-        lineWidth={3}
-        points={plotPoints}
+      <DataDisplay
+        xValues={props.xValues}
+        yValues={props.yValues}
+        theme={props.theme}
+        plotType={props.plotType}
       />
     </Canvas>
   );

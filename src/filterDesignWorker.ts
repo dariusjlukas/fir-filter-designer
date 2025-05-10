@@ -1,13 +1,13 @@
-import { BigNumber } from 'mathjs';
+import { type BigNumber, type Complex } from 'mathjs';
 import {
-  createKaiserLowpassFilter,
+  createKaiserFilter,
   KaiserDesignParams,
 } from './filterDesignFunctions';
 import { FilterType, TapNumericType } from './App';
 
 export type FilterDesignWorkerOutboundMessage = {
   messageType: 'filter taps';
-  payload: BigNumber[];
+  payload: BigNumber[] | Complex[];
 };
 
 export type FilterDesignWorkerInboundMessage = {
@@ -37,7 +37,7 @@ onmessage = (m: MessageEvent<FilterDesignWorkerInboundMessage>) => {
       if (filterDesignRequest.designMethod === 'window') {
         const windowDesignRequest =
           filterDesignRequest.parameters as WindowDesignRequest;
-        const filterTaps = createKaiserLowpassFilter(
+        const filterTaps = createKaiserFilter(
           filterDesignRequest.filterType,
           filterDesignRequest.tapNumericType,
           windowDesignRequest.windowParameters

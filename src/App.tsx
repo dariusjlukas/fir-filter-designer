@@ -30,7 +30,18 @@ import { useTheme } from '@heroui/use-theme';
 import { useMemo, useState } from 'react';
 import { WindowMethodDesigner } from './WindowMethodDesigner';
 import { ThreejsPlot } from './ThreejsPlot';
-import { abs, BigNumber, fft, floor, log10, multiply, number } from 'mathjs';
+import {
+  abs,
+  BigNumber,
+  complex,
+  Complex,
+  fft,
+  floor,
+  isComplex,
+  log10,
+  multiply,
+  number,
+} from 'mathjs';
 import { fftshift, linearMap } from './commonMath';
 import { Float16Array } from '@petamoriken/float16';
 
@@ -42,7 +53,7 @@ export const App = () => {
   const { theme, setTheme } = useTheme('dark');
 
   const [filterDesignInProgress, setFilterDesignInProgress] = useState(false);
-  const [filterTaps, setFilterTaps] = useState<BigNumber[]>([]);
+  const [filterTaps, setFilterTaps] = useState<BigNumber[] | Complex[]>([]);
   const [designMethod, setDesignMethod] = useState<SharedSelection>(
     new Set([])
   );
@@ -54,13 +65,48 @@ export const App = () => {
   const fftLengthScalar = 8;
 
   const castFilterTaps = useMemo(() => {
-    switch (outputDatatype) {
-      case 'float64':
-        return new Float64Array(number(filterTaps) as number[]);
-      case 'float32':
-        return new Float32Array(number(filterTaps) as number[]);
-      case 'float16':
-        return new Float16Array(number(filterTaps) as number[]);
+    if (!isComplex(filterTaps[0])) {
+      switch (outputDatatype) {
+        case 'float64':
+          return new Float64Array(number(filterTaps) as number[]);
+        case 'float32':
+          return new Float32Array(number(filterTaps) as number[]);
+        case 'float16':
+          return new Float16Array(number(filterTaps) as number[]);
+      }
+    } else {
+      const realArray = filterTaps.map((v) => (v as Complex).re);
+      const imaginaryArray = filterTaps.map((v) => (v as Complex).im);
+
+      switch (outputDatatype) {
+        case 'float64': {
+          const castRealArray = new Float64Array(realArray);
+          const castImaginaryArray = new Float64Array(imaginaryArray);
+          const complexArray = [];
+          for (let i = 0; i < castRealArray.length; i++) {
+            complexArray.push(complex(castRealArray[i], castImaginaryArray[i]));
+          }
+          return complexArray;
+        }
+        case 'float32': {
+          const castRealArray = new Float32Array(realArray);
+          const castImaginaryArray = new Float32Array(imaginaryArray);
+          const complexArray = [];
+          for (let i = 0; i < castRealArray.length; i++) {
+            complexArray.push(complex(castRealArray[i], castImaginaryArray[i]));
+          }
+          return complexArray;
+        }
+        case 'float16': {
+          const castRealArray = new Float16Array(realArray);
+          const castImaginaryArray = new Float16Array(imaginaryArray);
+          const complexArray = [];
+          for (let i = 0; i < castRealArray.length; i++) {
+            complexArray.push(complex(castRealArray[i], castImaginaryArray[i]));
+          }
+          return complexArray;
+        }
+      }
     }
   }, [filterTaps, outputDatatype]);
 
@@ -190,7 +236,7 @@ export const App = () => {
               <></>
             )}
           </CardBody>
-          <CardFooter className='flex flex-col gap-2'>
+          <CardFooter className='min-h-24 flex flex-col gap-2'>
             {castFilterTaps.length !== 0 && !filterDesignInProgress ? (
               <Chip variant='faded'>
                 Filter design finished! Number of taps: {castFilterTaps.length}.
@@ -253,14 +299,15 @@ export const App = () => {
                             )
                           )
                     }
-                    yValues={
+                    yValues={[
                       tapNumericType === 'complex'
                         ? frequencyResponse
                         : frequencyResponse.slice(
                             (frequencyResponse.length + 1) / 2
-                          )
-                    }
+                          ),
+                    ]}
                     theme={theme}
+                    plotType='line'
                   />
                 )}
               </Tab>
@@ -278,11 +325,29 @@ export const App = () => {
                   <div className='size-full content-center text-center border-2 border-dashed rounded-lg'>
                     <div>Design a filter to view its taps.</div>
                   </div>
+                ) : !isComplex(filterTaps[0]) ? (
+                  <ThreejsPlot
+                    xValues={[...Array(castFilterTaps.length).keys()]}
+                    yValues={[
+                      [
+                        ...(castFilterTaps as
+                          | Float64Array<ArrayBuffer>
+                          | Float32Array<ArrayBuffer>
+                          | Float16Array),
+                      ],
+                    ]}
+                    theme={theme}
+                    plotType='point'
+                  />
                 ) : (
                   <ThreejsPlot
                     xValues={[...Array(castFilterTaps.length).keys()]}
-                    yValues={[...castFilterTaps]}
+                    yValues={[
+                      [...(castFilterTaps as Complex[]).map((v) => v.re)],
+                      [...(castFilterTaps as Complex[]).map((v) => v.im)],
+                    ]}
                     theme={theme}
+                    plotType='point'
                   />
                 )}
               </Tab>
@@ -297,7 +362,7 @@ export const App = () => {
                 }
               >
                 <h1 className='p-2'>
-                  {tapNumericType === 'complex'
+                  {isComplex(filterTaps[0])
                     ? 'Note: Tap data is formatted [real, imaginary].'
                     : ''}
                 </h1>
