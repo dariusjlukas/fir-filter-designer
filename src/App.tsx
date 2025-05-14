@@ -217,7 +217,6 @@ export const App = () => {
               label='Design Method'
             >
               <SelectItem key='kaiserWindow'>Kaiser Window</SelectItem>
-              <SelectItem key='parksMcClellan'>Parks-McClellan</SelectItem>
             </Select>
             {(designMethod as Set<string | number>).size === 0 ? (
               <></>
