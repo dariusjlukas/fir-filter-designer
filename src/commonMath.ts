@@ -17,7 +17,7 @@ export const sinc = (x: BigNumber): BigNumber => {
   return divide(sin(pix), pix) as BigNumber;
 };
 
-//Modified bessel function of the first kind
+//Zeroth-order Modified Bessel function of the first kind
 export const I0 = (
   z: BigNumber,
   kmax = 1000,
