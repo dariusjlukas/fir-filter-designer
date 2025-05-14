@@ -257,7 +257,7 @@ export const App = () => {
             </Button>
           </CardFooter>
         </Card>
-        <Card className='col-span-3 h-full'>
+        <Card className='col-span-3 h-full m-0 p-0'>
           <CardBody className='h-full'>
             <Tabs radius='lg'>
               <Tab
@@ -276,6 +276,8 @@ export const App = () => {
                   </div>
                 ) : (
                   <ThreejsPlot
+                    xLabel='Frequency (Normalized)'
+                    yLabel='Amplitude (dB)'
                     xValues={
                       tapNumericType === 'complex'
                         ? [...Array(frequencyResponse.length).keys()].map((v) =>
@@ -327,6 +329,8 @@ export const App = () => {
                   </div>
                 ) : !isComplex(filterTaps[0]) ? (
                   <ThreejsPlot
+                    xLabel='Tap Index'
+                    yLabel='Value'
                     xValues={[...Array(castFilterTaps.length).keys()]}
                     yValues={[
                       [
@@ -341,6 +345,8 @@ export const App = () => {
                   />
                 ) : (
                   <ThreejsPlot
+                    xLabel='Tap Index'
+                    yLabel='Value'
                     xValues={[...Array(castFilterTaps.length).keys()]}
                     yValues={[
                       [...(castFilterTaps as Complex[]).map((v) => v.re)],
@@ -361,11 +367,6 @@ export const App = () => {
                   </>
                 }
               >
-                <h1 className='p-2'>
-                  {isComplex(filterTaps[0])
-                    ? 'Note: Tap data is formatted [real, imaginary].'
-                    : ''}
-                </h1>
                 <Textarea
                   maxRows={30}
                   variant='bordered'

@@ -1,4 +1,5 @@
 import {
+  abs,
   add,
   bignumber,
   BigNumber,
@@ -83,7 +84,7 @@ export const createKaiserFilter = (
 ): BigNumber[] | Complex[] => {
   const A = max(
     parameters.minStopbandAttenuation,
-    20 * log10(10 ** (parameters.maxPassbandRipple / 20) - 1)
+    abs(20 * log10(10 ** (parameters.maxPassbandRipple / 20) - 1))
   );
   const beta = calcKaiserBeta(A);
   let N = estimateKaiserTapCount(A, parameters.transitionBandwidth);

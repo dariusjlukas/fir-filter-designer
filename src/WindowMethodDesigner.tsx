@@ -134,7 +134,7 @@ export const WindowMethodDesigner = (
               })
             }
             size='sm'
-            label='Cutoff Frequency'
+            label='Cutoff Frequency (Normalized)'
           />
         ) : (
           <>
@@ -150,7 +150,7 @@ export const WindowMethodDesigner = (
                 })
               }
               size='sm'
-              label='Lower Cutoff Frequency'
+              label='Lower Cutoff Frequency (Normalized)'
             />
             <NumberInput
               isWheelDisabled
@@ -164,7 +164,7 @@ export const WindowMethodDesigner = (
                 })
               }
               size='sm'
-              label='Upper Cutoff Frequency'
+              label='Upper Cutoff Frequency (Normalized)'
             />
           </>
         )}
@@ -178,7 +178,7 @@ export const WindowMethodDesigner = (
             })
           }
           size='sm'
-          label='Transition Bandwidth'
+          label='Transition Bandwidth (Normalized)'
         />
         <NumberInput
           isWheelDisabled
@@ -190,7 +190,7 @@ export const WindowMethodDesigner = (
             })
           }
           size='sm'
-          label='Min Stopband Attenuation'
+          label='Min Stopband Attenuation (dB)'
         />
         <NumberInput
           isWheelDisabled
@@ -202,7 +202,7 @@ export const WindowMethodDesigner = (
             })
           }
           size='sm'
-          label='Max Passband Ripple'
+          label='Max Passband Ripple (dB)'
         />
         <NumberInput
           isWheelDisabled

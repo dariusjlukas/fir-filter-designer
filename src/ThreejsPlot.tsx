@@ -643,6 +643,8 @@ const CameraBoundsFix = (props: CameraBoundsFixProps) => {
 export type ThreejsPlotProps = {
   xValues: number[];
   yValues: number[][];
+  xLabel: string;
+  yLabel: string;
   theme: string;
   plotType: 'line' | 'point';
 };
@@ -708,116 +710,132 @@ export const ThreejsPlot = (props: ThreejsPlotProps) => {
   }, [handlePointerUp]);
 
   return (
-    <Canvas
-      className={`size-full bg-default-100 rounded-lg ${!xAxisHovered && !yAxisHovered ? 'cursor-none' : ''} ${xAxisHovered ? 'cursor-ew-resize' : ''} ${yAxisHovered ? 'cursor-ns-resize' : ''}`}
-      onPointerEnter={() => {
-        setPointerOverCanvas(true);
-      }}
-      onPointerLeave={() => {
-        setPointerOverCanvas(false);
-      }}
-      onPointerDown={() => {
-        setPointerDown(true);
-      }}
-    >
-      <OrthographicCamera
-        left={-cameraWidth / 2}
-        right={cameraWidth / 2}
-        top={cameraHeight / 2}
-        bottom={-cameraHeight / 2}
-        zoom={1}
-        position={[0, 0, 10]}
-        makeDefault
-      />
-      <CameraBoundsFix cameraWidth={cameraWidth} cameraHeight={cameraHeight} />
-      <OrbitControls
-        ref={orbitControlsRef}
-        mouseButtons={{ LEFT: THREE.MOUSE.PAN, MIDDLE: THREE.MOUSE.DOLLY }}
-        minZoom={1}
-        maxZoom={1}
-        dampingFactor={0.5}
-        enableRotate={false}
-        makeDefault
-      />
-      <ControlsLockingHandler
-        orbitControlsRef={orbitControlsRef}
-        xAxisHovered={xAxisHovered}
-        yAxisHovered={yAxisHovered}
-      />
-      <Grid
-        position={[0, 0, 0]}
-        args={[200, 200]}
-        fadeDistance={100}
-        fadeStrength={1}
-        cellThickness={1}
-        cellSize={cellSize}
-        cellColor={
-          props.theme === 'dark'
-            ? new THREE.Color(0.01, 0.01, 0.01)
-            : new THREE.Color(0.8, 0.8, 0.8)
-        }
-        sectionThickness={1}
-        sectionSize={sectionSize}
-        sectionColor={
-          props.theme === 'dark'
-            ? new THREE.Color(0.1, 0.2, 0.1)
-            : new THREE.Color(0.3, 0.1, 0.1)
-        }
-        followCamera
-        rotation={new THREE.Euler(Math.PI / 2, 0, 0)}
-      />
-      <Crosshair
-        theme={props.theme}
-        renderPriority={3}
-        xLabelDecimalPlaces={3}
-        yLabelDecimalPlaces={2}
-        xScaleRange={xScaleRange}
-        yScaleRange={yScaleRange}
-        xAxisThickness={xAxisThickness}
-        yAxisThickness={yAxisThickness}
-        pointerOverCanvas={pointerOverCanvas}
-        axisHovered={
-          xAxisHovered || yAxisHovered || pointerOverXAxis || pointerOverYAxis
-        }
-        cameraWidth={cameraWidth}
-        cameraHeight={cameraHeight}
-      />
-      <AxisOverlay
-        theme={props.theme}
-        renderPriority={1}
-        axis={'x-axis'}
-        thickness={xAxisThickness}
-        tickSpacing={sectionSize}
-        scaleRange={xScaleRange}
-        cameraWidth={cameraWidth}
-        cameraHeight={cameraHeight}
-        labelDecimalPlaces={3}
-        setPointerOverAxis={setPointerOverXAxis}
-        hovered={xAxisHovered}
-        setHovered={setXAxisHovered}
-        pointerDown={pointerDown}
-      />
-      <AxisOverlay
-        theme={props.theme}
-        renderPriority={2}
-        axis={'y-axis'}
-        thickness={yAxisThickness}
-        tickSpacing={sectionSize}
-        scaleRange={yScaleRange}
-        cameraWidth={cameraWidth}
-        cameraHeight={cameraHeight}
-        labelDecimalPlaces={2}
-        setPointerOverAxis={setPointerOverYAxis}
-        hovered={yAxisHovered}
-        setHovered={setYAxisHovered}
-        pointerDown={pointerDown}
-      />
-      <DataDisplay
-        xValues={props.xValues}
-        yValues={props.yValues}
-        theme={props.theme}
-        plotType={props.plotType}
-      />
-    </Canvas>
+    <div className='size-full flex flex-col items-center'>
+      <div className='size-full flex items-center justify-center justify-items-center'>
+        <div className='grow-0 w-6'>
+          <p className='-rotate-90 text-nowrap text-center pb-4'>
+            {props.yLabel}
+          </p>
+        </div>
+        <Canvas
+          className={`size-full bg-default-100 rounded-lg ${!xAxisHovered && !yAxisHovered ? 'cursor-none' : ''} ${xAxisHovered ? 'cursor-ew-resize' : ''} ${yAxisHovered ? 'cursor-ns-resize' : ''}`}
+          onPointerEnter={() => {
+            setPointerOverCanvas(true);
+          }}
+          onPointerLeave={() => {
+            setPointerOverCanvas(false);
+          }}
+          onPointerDown={() => {
+            setPointerDown(true);
+          }}
+        >
+          <OrthographicCamera
+            left={-cameraWidth / 2}
+            right={cameraWidth / 2}
+            top={cameraHeight / 2}
+            bottom={-cameraHeight / 2}
+            zoom={1}
+            position={[0, 0, 10]}
+            makeDefault
+          />
+          <CameraBoundsFix
+            cameraWidth={cameraWidth}
+            cameraHeight={cameraHeight}
+          />
+          <OrbitControls
+            ref={orbitControlsRef}
+            mouseButtons={{ LEFT: THREE.MOUSE.PAN, MIDDLE: THREE.MOUSE.DOLLY }}
+            minZoom={1}
+            maxZoom={1}
+            dampingFactor={0.5}
+            enableRotate={false}
+            makeDefault
+          />
+          <ControlsLockingHandler
+            orbitControlsRef={orbitControlsRef}
+            xAxisHovered={xAxisHovered}
+            yAxisHovered={yAxisHovered}
+          />
+          <Grid
+            position={[0, 0, 0]}
+            args={[200, 200]}
+            fadeDistance={100}
+            fadeStrength={1}
+            cellThickness={1}
+            cellSize={cellSize}
+            cellColor={
+              props.theme === 'dark'
+                ? new THREE.Color(0.01, 0.01, 0.01)
+                : new THREE.Color(0.8, 0.8, 0.8)
+            }
+            sectionThickness={1}
+            sectionSize={sectionSize}
+            sectionColor={
+              props.theme === 'dark'
+                ? new THREE.Color(0.1, 0.2, 0.1)
+                : new THREE.Color(0.3, 0.1, 0.1)
+            }
+            followCamera
+            rotation={new THREE.Euler(Math.PI / 2, 0, 0)}
+          />
+          <Crosshair
+            theme={props.theme}
+            renderPriority={3}
+            xLabelDecimalPlaces={3}
+            yLabelDecimalPlaces={2}
+            xScaleRange={xScaleRange}
+            yScaleRange={yScaleRange}
+            xAxisThickness={xAxisThickness}
+            yAxisThickness={yAxisThickness}
+            pointerOverCanvas={pointerOverCanvas}
+            axisHovered={
+              xAxisHovered ||
+              yAxisHovered ||
+              pointerOverXAxis ||
+              pointerOverYAxis
+            }
+            cameraWidth={cameraWidth}
+            cameraHeight={cameraHeight}
+          />
+          <AxisOverlay
+            theme={props.theme}
+            renderPriority={1}
+            axis={'x-axis'}
+            thickness={xAxisThickness}
+            tickSpacing={sectionSize}
+            scaleRange={xScaleRange}
+            cameraWidth={cameraWidth}
+            cameraHeight={cameraHeight}
+            labelDecimalPlaces={3}
+            setPointerOverAxis={setPointerOverXAxis}
+            hovered={xAxisHovered}
+            setHovered={setXAxisHovered}
+            pointerDown={pointerDown}
+          />
+          <AxisOverlay
+            theme={props.theme}
+            renderPriority={2}
+            axis={'y-axis'}
+            thickness={yAxisThickness}
+            tickSpacing={sectionSize}
+            scaleRange={yScaleRange}
+            cameraWidth={cameraWidth}
+            cameraHeight={cameraHeight}
+            labelDecimalPlaces={2}
+            setPointerOverAxis={setPointerOverYAxis}
+            hovered={yAxisHovered}
+            setHovered={setYAxisHovered}
+            pointerDown={pointerDown}
+          />
+          <DataDisplay
+            xValues={props.xValues}
+            yValues={props.yValues}
+            theme={props.theme}
+            plotType={props.plotType}
+          />
+        </Canvas>
+      </div>
+      <p>{props.xLabel}</p>
+    </div>
   );
 };
