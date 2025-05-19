@@ -114,9 +114,7 @@ export const createKaiserFilter = (
 
   const spectralInvert = (input: BigNumber[]) => {
     return input.map((v, i) =>
-      i === (input.length - 1) / 2
-        ? add(1, multiply(bignumber(-1), v))
-        : multiply(bignumber(-1), v)
+      i % 2 === 0 ? v : multiply(bignumber(-1), v)
     ) as BigNumber[];
   };
 
@@ -145,7 +143,9 @@ export const createKaiserFilter = (
     case 'lowpass':
       return designLowpass(parameters.cutoffFreq as number);
     case 'highpass':
-      return spectralInvert(designLowpass(parameters.cutoffFreq as number));
+      return spectralInvert(
+        designLowpass(0.5 - (parameters.cutoffFreq as number))
+      );
     case 'bandpass':
       return heterodyneFilter(
         designLowpass(
@@ -164,7 +164,7 @@ export const createKaiserFilter = (
         (parameters.cutoffFreq as [number, number])[0]
       );
       const highpass = spectralInvert(
-        designLowpass((parameters.cutoffFreq as [number, number])[1])
+        designLowpass(0.5 - (parameters.cutoffFreq as [number, number])[1])
       );
       return lowpass.map((v, i) => add(v, highpass[i]));
     }

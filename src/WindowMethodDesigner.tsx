@@ -7,7 +7,6 @@ import {
   FilterDesignWorkerInboundMessage,
   FilterDesignWorkerOutboundMessage,
 } from './filterDesignWorker';
-import { KaiserDesignParams } from './filterDesignFunctions';
 import { FilterType, TapNumericType } from './App';
 
 type DeserializedBigNumber = { mathjs: string; value: string };
@@ -43,16 +42,20 @@ const defaultBandpassParams = {
 export const WindowMethodDesigner = (
   props: WindowMethodDesignerProps
 ): React.ReactNode => {
-  const [kaiserDesignParams, setKaiserDesignParams] =
-    useImmer<KaiserDesignParams>(defaultLowpassParams);
+  const [kaiserLowpassDesignParams, setKaiserLowpassDesignParams] =
+    useImmer<typeof defaultLowpassParams>(defaultLowpassParams);
+  const [kaiserBandpassDesignParams, setKaiserBandpassDesignParams] = useImmer<
+    typeof defaultBandpassParams
+  >(defaultBandpassParams);
 
-  useEffect(() => {
-    if (props.filterType === 'lowpass' || props.filterType === 'highpass') {
-      setKaiserDesignParams(defaultLowpassParams);
-    } else {
-      setKaiserDesignParams(defaultBandpassParams);
-    }
-  }, [props.filterType, setKaiserDesignParams]);
+  const kaiserDesignParamsWrapper =
+    props.filterType === 'lowpass' || props.filterType === 'highpass'
+      ? kaiserLowpassDesignParams
+      : kaiserBandpassDesignParams;
+  const setKaiserDesignParamsWrapper =
+    props.filterType === 'lowpass' || props.filterType === 'highpass'
+      ? setKaiserLowpassDesignParams
+      : setKaiserBandpassDesignParams;
 
   //Design a filter when requested
   useEffect(() => {
@@ -69,7 +72,7 @@ export const WindowMethodDesigner = (
             filterType: props.filterType,
             tapNumericType: props.tapNumericType,
             parameters: {
-              windowParameters: kaiserDesignParams,
+              windowParameters: kaiserDesignParamsWrapper,
             },
           },
         };
@@ -116,7 +119,7 @@ export const WindowMethodDesigner = (
     props.filterDesignInProgress,
     props.setFilterTaps,
     props.setFilterDesignInProgress,
-    kaiserDesignParams,
+    kaiserDesignParamsWrapper,
     props,
   ]);
 
@@ -127,9 +130,9 @@ export const WindowMethodDesigner = (
           <NumberInput
             isWheelDisabled
             isDisabled={props.filterDesignInProgress}
-            value={(kaiserDesignParams.cutoffFreq as number) ?? null}
+            value={kaiserLowpassDesignParams.cutoffFreq ?? null}
             onValueChange={(value) =>
-              setKaiserDesignParams((draft) => {
+              setKaiserLowpassDesignParams((draft) => {
                 draft.cutoffFreq = value;
               })
             }
@@ -141,13 +144,13 @@ export const WindowMethodDesigner = (
             <NumberInput
               isWheelDisabled
               isDisabled={props.filterDesignInProgress}
-              value={
-                (kaiserDesignParams.cutoffFreq as [number, number])[0] ?? null
-              }
+              value={kaiserBandpassDesignParams.cutoffFreq[0] ?? null}
               onValueChange={(value) =>
-                setKaiserDesignParams((draft) => {
-                  (draft.cutoffFreq as [number, number])[0] = value;
-                })
+                setKaiserBandpassDesignParams(
+                  (draft: { cutoffFreq: [number, number] }) => {
+                    draft.cutoffFreq[0] = value;
+                  }
+                )
               }
               size='sm'
               label='Lower Cutoff Frequency (Normalized)'
@@ -155,13 +158,13 @@ export const WindowMethodDesigner = (
             <NumberInput
               isWheelDisabled
               isDisabled={props.filterDesignInProgress}
-              value={
-                (kaiserDesignParams.cutoffFreq as [number, number])[1] ?? null
-              }
+              value={kaiserBandpassDesignParams.cutoffFreq[1] ?? null}
               onValueChange={(value) =>
-                setKaiserDesignParams((draft) => {
-                  (draft.cutoffFreq as [number, number])[1] = value;
-                })
+                setKaiserBandpassDesignParams(
+                  (draft: { cutoffFreq: [number, number] }) => {
+                    draft.cutoffFreq[1] = value;
+                  }
+                )
               }
               size='sm'
               label='Upper Cutoff Frequency (Normalized)'
@@ -171,11 +174,13 @@ export const WindowMethodDesigner = (
         <NumberInput
           isWheelDisabled
           isDisabled={props.filterDesignInProgress}
-          value={kaiserDesignParams.transitionBandwidth ?? null}
+          value={kaiserDesignParamsWrapper.transitionBandwidth ?? null}
           onValueChange={(value) =>
-            setKaiserDesignParams((draft) => {
-              draft.transitionBandwidth = value;
-            })
+            setKaiserDesignParamsWrapper(
+              (draft: { transitionBandwidth: number }) => {
+                draft.transitionBandwidth = value;
+              }
+            )
           }
           size='sm'
           label='Transition Bandwidth (Normalized)'
@@ -183,11 +188,13 @@ export const WindowMethodDesigner = (
         <NumberInput
           isWheelDisabled
           isDisabled={props.filterDesignInProgress}
-          value={kaiserDesignParams.minStopbandAttenuation ?? null}
+          value={kaiserDesignParamsWrapper.minStopbandAttenuation ?? null}
           onValueChange={(value) =>
-            setKaiserDesignParams((draft) => {
-              draft.minStopbandAttenuation = value;
-            })
+            setKaiserDesignParamsWrapper(
+              (draft: { minStopbandAttenuation: number }) => {
+                draft.minStopbandAttenuation = value;
+              }
+            )
           }
           size='sm'
           label='Min Stopband Attenuation (dB)'
@@ -195,11 +202,13 @@ export const WindowMethodDesigner = (
         <NumberInput
           isWheelDisabled
           isDisabled={props.filterDesignInProgress}
-          value={kaiserDesignParams.maxPassbandRipple ?? null}
+          value={kaiserDesignParamsWrapper.maxPassbandRipple ?? null}
           onValueChange={(value) =>
-            setKaiserDesignParams((draft) => {
-              draft.maxPassbandRipple = value;
-            })
+            setKaiserDesignParamsWrapper(
+              (draft: { maxPassbandRipple: number }) => {
+                draft.maxPassbandRipple = value;
+              }
+            )
           }
           size='sm'
           label='Max Passband Ripple (dB)'
@@ -207,11 +216,13 @@ export const WindowMethodDesigner = (
         <NumberInput
           isWheelDisabled
           isDisabled={props.filterDesignInProgress}
-          value={kaiserDesignParams.besselMaxIterations ?? null}
+          value={kaiserDesignParamsWrapper.besselMaxIterations ?? null}
           onValueChange={(value) =>
-            setKaiserDesignParams((draft) => {
-              draft.besselMaxIterations = value;
-            })
+            setKaiserDesignParamsWrapper(
+              (draft: { besselMaxIterations: number }) => {
+                draft.besselMaxIterations = value;
+              }
+            )
           }
           size='sm'
           label='Max Bessel Calculation Iterations'
