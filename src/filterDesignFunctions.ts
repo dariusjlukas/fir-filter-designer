@@ -26,7 +26,6 @@ export type KaiserDesignParams = {
   minStopbandAttenuation: number;
   maxPassbandRipple: number;
   besselMaxIterations: number;
-  besselDecimalPlaces: number;
 };
 
 export const calcKaiserWindow = (
@@ -95,7 +94,7 @@ export const createKaiserFilter = (
     beta,
     N,
     parameters.besselMaxIterations,
-    bignumber(`1.0e-${parameters.besselDecimalPlaces}`)
+    bignumber(`1.0e-${14}`)
   );
 
   const designLowpass = (cutoff: number) => {

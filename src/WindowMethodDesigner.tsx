@@ -1,4 +1,4 @@
-import { addToast, NumberInput } from '@heroui/react';
+import { addToast, Input } from '@heroui/react';
 import { bignumber, BigNumber, complex, Complex } from 'mathjs';
 import { useEffect } from 'react';
 import * as React from 'react';
@@ -8,6 +8,8 @@ import {
   FilterDesignWorkerOutboundMessage,
 } from './filterDesignWorker';
 import { FilterType, TapNumericType } from './App';
+import { stringIsValidNumber } from './util';
+import { KaiserDesignParams } from './filterDesignFunctions';
 
 type DeserializedBigNumber = { mathjs: string; value: string };
 type DeserializedComplex = { mathjs: string; re: number; im: number };
@@ -22,21 +24,68 @@ export type WindowMethodDesignerProps = {
 };
 
 const defaultLowpassParams = {
-  cutoffFreq: 0.25,
-  transitionBandwidth: 0.05,
-  minStopbandAttenuation: 60,
-  maxPassbandRipple: 0.01,
-  besselMaxIterations: 1000,
-  besselDecimalPlaces: 14,
+  cutoffFreq: '0.25',
+  transitionBandwidth: '0.05',
+  minStopbandAttenuation: '60',
+  maxPassbandRipple: '0.01',
+  besselMaxIterations: '1000',
 };
 
 const defaultBandpassParams = {
-  cutoffFreq: [0.15, 0.4] as [number, number],
-  transitionBandwidth: 0.05,
-  minStopbandAttenuation: 60,
-  maxPassbandRipple: 0.01,
-  besselMaxIterations: 1000,
-  besselDecimalPlaces: 14,
+  cutoffFreq: ['0.15', '0.4'],
+  transitionBandwidth: '0.05',
+  minStopbandAttenuation: '60',
+  maxPassbandRipple: '0.01',
+  besselMaxIterations: '1000',
+};
+
+const validateAndParseDesignParams = (
+  filterType: WindowMethodDesignerProps['filterType'],
+  params: typeof defaultLowpassParams | typeof defaultBandpassParams
+): KaiserDesignParams | null => {
+  if (filterType === 'lowpass' || filterType === 'highpass') {
+    // Check all values
+    if (
+      stringIsValidNumber(params.cutoffFreq as string) &&
+      stringIsValidNumber(params.transitionBandwidth) &&
+      stringIsValidNumber(params.minStopbandAttenuation) &&
+      stringIsValidNumber(params.maxPassbandRipple) &&
+      stringIsValidNumber(params.besselMaxIterations)
+    ) {
+      return {
+        cutoffFreq: Number(params.cutoffFreq as string),
+        transitionBandwidth: Number(params.transitionBandwidth),
+        minStopbandAttenuation: Number(params.minStopbandAttenuation),
+        maxPassbandRipple: Number(params.maxPassbandRipple),
+        besselMaxIterations: Number(params.besselMaxIterations),
+      };
+    } else {
+      return null;
+    }
+  } else {
+    // Check all values
+    if (
+      stringIsValidNumber((params.cutoffFreq as [string, string])[0]) &&
+      stringIsValidNumber((params.cutoffFreq as [string, string])[1]) &&
+      stringIsValidNumber(params.transitionBandwidth) &&
+      stringIsValidNumber(params.minStopbandAttenuation) &&
+      stringIsValidNumber(params.maxPassbandRipple) &&
+      stringIsValidNumber(params.besselMaxIterations)
+    ) {
+      return {
+        cutoffFreq: [
+          Number((params.cutoffFreq as [string, string])[0]),
+          Number((params.cutoffFreq as [string, string])[1]),
+        ],
+        transitionBandwidth: Number(params.transitionBandwidth),
+        minStopbandAttenuation: Number(params.minStopbandAttenuation),
+        maxPassbandRipple: Number(params.maxPassbandRipple),
+        besselMaxIterations: Number(params.besselMaxIterations),
+      };
+    } else {
+      return null;
+    }
+  }
 };
 
 export const WindowMethodDesigner = (
@@ -60,59 +109,71 @@ export const WindowMethodDesigner = (
   //Design a filter when requested
   useEffect(() => {
     if (props.filterDesignInProgress) {
-      if (window.Worker) {
-        const windowDesignWorker = new Worker(
-          new URL('filterDesignWorker.ts', import.meta.url),
-          { type: 'module' }
-        );
-        const filterDesignMessage: FilterDesignWorkerInboundMessage = {
-          messageType: 'filter design request',
-          payload: {
-            designMethod: 'window',
-            filterType: props.filterType,
-            tapNumericType: props.tapNumericType,
-            parameters: {
-              windowParameters: kaiserDesignParamsWrapper,
+      if (
+        validateAndParseDesignParams(
+          props.filterType,
+          kaiserDesignParamsWrapper
+        ) !== null
+      ) {
+        if (window.Worker) {
+          const windowDesignWorker = new Worker(
+            new URL('filterDesignWorker.ts', import.meta.url),
+            { type: 'module' }
+          );
+          const filterDesignMessage: FilterDesignWorkerInboundMessage = {
+            messageType: 'filter design request',
+            payload: {
+              designMethod: 'window',
+              filterType: props.filterType,
+              tapNumericType: props.tapNumericType,
+              parameters: {
+                windowParameters: validateAndParseDesignParams(
+                  props.filterType,
+                  kaiserDesignParamsWrapper
+                ) as KaiserDesignParams,
+              },
             },
-          },
-        };
-        windowDesignWorker.onmessage = (m: MessageEvent<string>) => {
-          const workerMessage = JSON.parse(m.data) as {
-            messageType: FilterDesignWorkerOutboundMessage['messageType'];
-            payload: DeserializedBigNumber[] | DeserializedComplex[];
           };
-          switch (workerMessage.messageType) {
-            case 'filter taps': {
-              const taps =
-                workerMessage.payload[0].mathjs === 'BigNumber'
-                  ? workerMessage.payload.map((v) =>
-                      bignumber((v as DeserializedBigNumber).value)
-                    )
-                  : workerMessage.payload.map((v) =>
-                      complex(
-                        (v as DeserializedComplex).re,
-                        (v as DeserializedComplex).im
+          windowDesignWorker.onmessage = (m: MessageEvent<string>) => {
+            const workerMessage = JSON.parse(m.data) as {
+              messageType: FilterDesignWorkerOutboundMessage['messageType'];
+              payload: DeserializedBigNumber[] | DeserializedComplex[];
+            };
+            switch (workerMessage.messageType) {
+              case 'filter taps': {
+                const taps =
+                  workerMessage.payload[0].mathjs === 'BigNumber'
+                    ? workerMessage.payload.map((v) =>
+                        bignumber((v as DeserializedBigNumber).value)
                       )
-                    );
-              props.setFilterTaps(taps);
-              props.setFilterDesignInProgress(false);
-              windowDesignWorker.terminate();
-              addToast({
-                title: `Design finished! Tap count: ${taps.length}`,
-                color: 'success',
-              });
-              break;
+                    : workerMessage.payload.map((v) =>
+                        complex(
+                          (v as DeserializedComplex).re,
+                          (v as DeserializedComplex).im
+                        )
+                      );
+                props.setFilterTaps(taps);
+                props.setFilterDesignInProgress(false);
+                windowDesignWorker.terminate();
+                addToast({
+                  title: `Design finished! Tap count: ${taps.length}`,
+                  color: 'success',
+                });
+                break;
+              }
+              default:
+                console.error(
+                  'Received unknown message from filter design worker!'
+                );
+                break;
             }
-            default:
-              console.error(
-                'Received unknown message from filter design worker!'
-              );
-              break;
-          }
-        };
-        windowDesignWorker.postMessage(filterDesignMessage);
+          };
+          windowDesignWorker.postMessage(filterDesignMessage);
+        } else {
+          console.error('Failed to create Web Worker!');
+        }
       } else {
-        console.error('Failed to create Web Worker!');
+        props.setFilterDesignInProgress(false);
       }
     }
   }, [
@@ -127,9 +188,13 @@ export const WindowMethodDesigner = (
     <div className={props.className + ' flex flex-col gap-2'}>
       <div className='flex flex-col gap-1 p-1 border-2 border-dashed border-default/80 rounded-lg'>
         {props.filterType === 'lowpass' || props.filterType === 'highpass' ? (
-          <NumberInput
-            isWheelDisabled
+          <Input
+            isInvalid={
+              !stringIsValidNumber(kaiserLowpassDesignParams.cutoffFreq)
+            }
+            errorMessage={'Input must be valid number.'}
             isDisabled={props.filterDesignInProgress}
+            step={0.01}
             value={kaiserLowpassDesignParams.cutoffFreq ?? null}
             onValueChange={(value) =>
               setKaiserLowpassDesignParams((draft) => {
@@ -141,43 +206,51 @@ export const WindowMethodDesigner = (
           />
         ) : (
           <>
-            <NumberInput
-              isWheelDisabled
+            <Input
+              isInvalid={
+                !stringIsValidNumber(kaiserLowpassDesignParams.cutoffFreq[0])
+              }
+              errorMessage={'Input must be valid number.'}
               isDisabled={props.filterDesignInProgress}
+              step={0.01}
               value={kaiserBandpassDesignParams.cutoffFreq[0] ?? null}
               onValueChange={(value) =>
-                setKaiserBandpassDesignParams(
-                  (draft: { cutoffFreq: [number, number] }) => {
-                    draft.cutoffFreq[0] = value;
-                  }
-                )
+                setKaiserBandpassDesignParams((draft) => {
+                  draft.cutoffFreq[0] = value;
+                })
               }
               size='sm'
               label='Lower Cutoff Frequency (Normalized)'
             />
-            <NumberInput
-              isWheelDisabled
+            <Input
+              isInvalid={
+                !stringIsValidNumber(kaiserLowpassDesignParams.cutoffFreq[1])
+              }
+              errorMessage={'Input must be valid number.'}
               isDisabled={props.filterDesignInProgress}
+              step={0.01}
               value={kaiserBandpassDesignParams.cutoffFreq[1] ?? null}
               onValueChange={(value) =>
-                setKaiserBandpassDesignParams(
-                  (draft: { cutoffFreq: [number, number] }) => {
-                    draft.cutoffFreq[1] = value;
-                  }
-                )
+                setKaiserBandpassDesignParams((draft) => {
+                  draft.cutoffFreq[1] = value;
+                })
               }
               size='sm'
               label='Upper Cutoff Frequency (Normalized)'
             />
           </>
         )}
-        <NumberInput
-          isWheelDisabled
+        <Input
+          isInvalid={
+            !stringIsValidNumber(kaiserDesignParamsWrapper.transitionBandwidth)
+          }
+          errorMessage={'Input must be valid number.'}
           isDisabled={props.filterDesignInProgress}
+          step={0.01}
           value={kaiserDesignParamsWrapper.transitionBandwidth ?? null}
           onValueChange={(value) =>
             setKaiserDesignParamsWrapper(
-              (draft: { transitionBandwidth: number }) => {
+              (draft: { transitionBandwidth: string }) => {
                 draft.transitionBandwidth = value;
               }
             )
@@ -185,13 +258,18 @@ export const WindowMethodDesigner = (
           size='sm'
           label='Transition Bandwidth (Normalized)'
         />
-        <NumberInput
-          isWheelDisabled
+        <Input
+          isInvalid={
+            !stringIsValidNumber(
+              kaiserDesignParamsWrapper.minStopbandAttenuation
+            )
+          }
+          errorMessage={'Input must be valid number.'}
           isDisabled={props.filterDesignInProgress}
           value={kaiserDesignParamsWrapper.minStopbandAttenuation ?? null}
           onValueChange={(value) =>
             setKaiserDesignParamsWrapper(
-              (draft: { minStopbandAttenuation: number }) => {
+              (draft: { minStopbandAttenuation: string }) => {
                 draft.minStopbandAttenuation = value;
               }
             )
@@ -199,13 +277,17 @@ export const WindowMethodDesigner = (
           size='sm'
           label='Min Stopband Attenuation (dB)'
         />
-        <NumberInput
-          isWheelDisabled
+        <Input
+          isInvalid={
+            !stringIsValidNumber(kaiserDesignParamsWrapper.maxPassbandRipple)
+          }
+          errorMessage={'Input must be valid number.'}
           isDisabled={props.filterDesignInProgress}
+          step={0.01}
           value={kaiserDesignParamsWrapper.maxPassbandRipple ?? null}
           onValueChange={(value) =>
             setKaiserDesignParamsWrapper(
-              (draft: { maxPassbandRipple: number }) => {
+              (draft: { maxPassbandRipple: string }) => {
                 draft.maxPassbandRipple = value;
               }
             )
@@ -213,13 +295,16 @@ export const WindowMethodDesigner = (
           size='sm'
           label='Max Passband Ripple (dB)'
         />
-        <NumberInput
-          isWheelDisabled
+        <Input
+          isInvalid={
+            !stringIsValidNumber(kaiserDesignParamsWrapper.besselMaxIterations)
+          }
+          errorMessage={'Input must be valid number.'}
           isDisabled={props.filterDesignInProgress}
           value={kaiserDesignParamsWrapper.besselMaxIterations ?? null}
           onValueChange={(value) =>
             setKaiserDesignParamsWrapper(
-              (draft: { besselMaxIterations: number }) => {
+              (draft: { besselMaxIterations: string }) => {
                 draft.besselMaxIterations = value;
               }
             )
