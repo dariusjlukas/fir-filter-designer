@@ -45,7 +45,7 @@ export const calcKaiserWindow = (
                 bignumber(1),
                 pow(
                   subtract(
-                    divide(multiply(bignumber(2), bignumber(n)), length),
+                    divide(multiply(bignumber(2), bignumber(n)), length - 1),
                     bignumber(1)
                   ),
                   bignumber(2)
@@ -107,8 +107,8 @@ export const createKaiserFilter = (
     const h = sampledSinc.map(
       (sample, index) => multiply(sample, kaiserWindow[index]) as BigNumber
     );
-    const h_sum = sum(h);
-    return h.map((v) => divide(v, h_sum) as BigNumber);
+    const hSum = sum(h);
+    return h.map((v) => divide(v, hSum) as BigNumber);
   };
 
   const spectralInvert = (input: BigNumber[]) => {
@@ -167,11 +167,5 @@ export const createKaiserFilter = (
       );
       return lowpass.map((v, i) => add(v, highpass[i]));
     }
-    // return heterodyneFilter(spectralInvert(lowpass), (((parameters.cutoffFreq as [number, number])[1] - (parameters.cutoffFreq as [number, number])[0]) / 2 +
-    // (parameters.cutoffFreq as [number, number])[0]));
-    // return spectralInvert(
-    //   heterodyneFilter(lowpass, (((parameters.cutoffFreq as [number, number])[1] - (parameters.cutoffFreq as [number, number])[0]) / 2 +
-    // (parameters.cutoffFreq as [number, number])[0]))
-    // )
   }
 };
