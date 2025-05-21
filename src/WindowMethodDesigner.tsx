@@ -18,6 +18,7 @@ export type WindowMethodDesignerProps = {
   className: string | undefined;
   filterType: FilterType;
   tapNumericType: TapNumericType;
+  sampleRate: number;
   setFilterTaps: React.Dispatch<React.SetStateAction<BigNumber[] | Complex[]>>;
   filterDesignInProgress: boolean;
   setFilterDesignInProgress: React.Dispatch<React.SetStateAction<boolean>>;
@@ -41,6 +42,7 @@ const defaultBandpassParams = {
 
 const validateAndParseDesignParams = (
   filterType: WindowMethodDesignerProps['filterType'],
+  sampleRate: number,
   params: typeof defaultLowpassParams | typeof defaultBandpassParams
 ): KaiserDesignParams | null => {
   if (filterType === 'lowpass' || filterType === 'highpass') {
@@ -53,8 +55,8 @@ const validateAndParseDesignParams = (
       stringIsValidNumber(params.besselMaxIterations)
     ) {
       return {
-        cutoffFreq: Number(params.cutoffFreq as string),
-        transitionBandwidth: Number(params.transitionBandwidth),
+        cutoffFreq: Number(params.cutoffFreq as string) / sampleRate,
+        transitionBandwidth: Number(params.transitionBandwidth) / sampleRate,
         minStopbandAttenuation: Number(params.minStopbandAttenuation),
         maxPassbandRipple: Number(params.maxPassbandRipple),
         besselMaxIterations: Number(params.besselMaxIterations),
@@ -74,10 +76,10 @@ const validateAndParseDesignParams = (
     ) {
       return {
         cutoffFreq: [
-          Number((params.cutoffFreq as [string, string])[0]),
-          Number((params.cutoffFreq as [string, string])[1]),
+          Number((params.cutoffFreq as [string, string])[0]) / sampleRate,
+          Number((params.cutoffFreq as [string, string])[1]) / sampleRate,
         ],
-        transitionBandwidth: Number(params.transitionBandwidth),
+        transitionBandwidth: Number(params.transitionBandwidth) / sampleRate,
         minStopbandAttenuation: Number(params.minStopbandAttenuation),
         maxPassbandRipple: Number(params.maxPassbandRipple),
         besselMaxIterations: Number(params.besselMaxIterations),
@@ -112,6 +114,7 @@ export const WindowMethodDesigner = (
       if (
         validateAndParseDesignParams(
           props.filterType,
+          props.sampleRate,
           kaiserDesignParamsWrapper
         ) !== null
       ) {
@@ -129,6 +132,7 @@ export const WindowMethodDesigner = (
               parameters: {
                 windowParameters: validateAndParseDesignParams(
                   props.filterType,
+                  props.sampleRate,
                   kaiserDesignParamsWrapper
                 ) as KaiserDesignParams,
               },
@@ -202,7 +206,7 @@ export const WindowMethodDesigner = (
               })
             }
             size='sm'
-            label='Cutoff Frequency (Normalized)'
+            label='Cutoff Frequency (Hz)'
           />
         ) : (
           <>
@@ -220,7 +224,7 @@ export const WindowMethodDesigner = (
                 })
               }
               size='sm'
-              label='Lower Cutoff Frequency (Normalized)'
+              label='Lower Cutoff Frequency (Hz)'
             />
             <Input
               isInvalid={
@@ -236,7 +240,7 @@ export const WindowMethodDesigner = (
                 })
               }
               size='sm'
-              label='Upper Cutoff Frequency (Normalized)'
+              label='Upper Cutoff Frequency (Hz)'
             />
           </>
         )}
@@ -256,7 +260,7 @@ export const WindowMethodDesigner = (
             )
           }
           size='sm'
-          label='Transition Bandwidth (Normalized)'
+          label='Transition Bandwidth (Hz)'
         />
         <Input
           isInvalid={

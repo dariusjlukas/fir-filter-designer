@@ -14,6 +14,7 @@ import {
   CardFooter,
   CardHeader,
   Chip,
+  Input,
   Link,
   Navbar,
   NavbarBrand,
@@ -44,6 +45,7 @@ import {
 } from 'mathjs';
 import { fftshift, linearMap } from './commonMath';
 import { Float16Array } from '@petamoriken/float16';
+import { stringIsValidNumber } from './util';
 
 export type OutputDatatype = 'float64' | 'float32' | 'float16';
 export type FilterType = 'lowpass' | 'highpass' | 'bandpass' | 'bandstop';
@@ -61,6 +63,7 @@ export const App = () => {
     useState<OutputDatatype>('float64');
   const [filterType, setFilterType] = useState<FilterType>('lowpass');
   const [tapNumericType, setTapNumericType] = useState<TapNumericType>('real');
+  const [sampleRate, setSampleRate] = useState('1.0');
 
   const castFilterTaps = useMemo(() => {
     if (!isComplex(filterTaps[0])) {
@@ -176,7 +179,7 @@ export const App = () => {
               <SelectItem key='bandstop'>Band-stop</SelectItem>
             </Select>
             <Select
-              className='mt-2'
+              className='mt-1.5'
               size='sm'
               isDisabled={filterDesignInProgress}
               disallowEmptySelection={true}
@@ -191,7 +194,7 @@ export const App = () => {
               <SelectItem key='complex'>Complex</SelectItem>
             </Select>
             <Select
-              className='mt-2'
+              className='mt-1.5'
               size='sm'
               isDisabled={filterDesignInProgress}
               disallowEmptySelection={true}
@@ -206,8 +209,18 @@ export const App = () => {
               <SelectItem key='float32'>Float32</SelectItem>
               <SelectItem key='float16'>Float16</SelectItem>
             </Select>
+            <Input
+              className='mt-1.5'
+              isInvalid={!stringIsValidNumber(sampleRate)}
+              errorMessage={'Input must be valid number.'}
+              isDisabled={filterDesignInProgress}
+              value={sampleRate ?? null}
+              onValueChange={setSampleRate}
+              size='sm'
+              label='Sample Rate (Hz)'
+            />
             <Select
-              className='mt-2'
+              className='mt-1.5'
               size='sm'
               isDisabled={filterDesignInProgress}
               selectedKeys={designMethod}
@@ -224,6 +237,9 @@ export const App = () => {
                 className='mt-2'
                 filterType={filterType}
                 tapNumericType={tapNumericType}
+                sampleRate={
+                  stringIsValidNumber(sampleRate) ? Number(sampleRate) : 1
+                }
                 setFilterTaps={setFilterTaps}
                 filterDesignInProgress={filterDesignInProgress}
                 setFilterDesignInProgress={setFilterDesignInProgress}
