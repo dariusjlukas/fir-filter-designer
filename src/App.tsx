@@ -62,8 +62,6 @@ export const App = () => {
   const [filterType, setFilterType] = useState<FilterType>('lowpass');
   const [tapNumericType, setTapNumericType] = useState<TapNumericType>('real');
 
-  const fftLengthScalar = 8;
-
   const castFilterTaps = useMemo(() => {
     if (!isComplex(filterTaps[0])) {
       switch (outputDatatype) {
@@ -110,26 +108,27 @@ export const App = () => {
     }
   }, [filterTaps, outputDatatype]);
 
-  const frequencyResponse = useMemo(
-    () =>
-      castFilterTaps.length !== 0
-        ? (abs(
-            fftshift(
-              fft(
-                Array(floor(castFilterTaps.length * (fftLengthScalar / 2)))
-                  .fill(0)
-                  .concat([...castFilterTaps])
-                  .concat(
-                    Array(
-                      floor(castFilterTaps.length * (fftLengthScalar / 2))
-                    ).fill(0)
-                  )
-              )
+  const frequencyResponse = useMemo(() => {
+    const targetFFTLength = Math.min(2048, castFilterTaps.length * 16);
+    const fftLengthScalar = Math.floor(targetFFTLength / castFilterTaps.length);
+
+    return castFilterTaps.length !== 0
+      ? (abs(
+          fftshift(
+            fft(
+              Array(floor(castFilterTaps.length * (fftLengthScalar / 2)))
+                .fill(0)
+                .concat([...castFilterTaps])
+                .concat(
+                  Array(
+                    floor(castFilterTaps.length * (fftLengthScalar / 2))
+                  ).fill(0)
+                )
             )
-          ).map((mag) => multiply(20, log10(mag))) as number[])
-        : [],
-    [castFilterTaps, fftLengthScalar]
-  );
+          )
+        ).map((mag) => multiply(20, log10(mag))) as number[])
+      : [];
+  }, [castFilterTaps]);
 
   return (
     <div className='size-full flex flex-col'>
