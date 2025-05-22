@@ -134,7 +134,7 @@ export const App = () => {
   }, [castFilterTaps]);
 
   return (
-    <div className='size-full flex flex-col text-xs'>
+    <div className='size-full flex flex-col'>
       <Navbar isBordered maxWidth='full' className='pr-4'>
         <NavbarBrand>
           <h1 className='font-bold font-mono'>FIR FILTER DESIGNER</h1>
