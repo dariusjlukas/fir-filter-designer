@@ -7,7 +7,7 @@ createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <HeroUIProvider>
       <ToastProvider />
-      <main className='w-screen h-screen text-foreground bg-background'>
+      <main className='w-screen md:h-screen text-foreground bg-background'>
         <App />
       </main>
     </HeroUIProvider>

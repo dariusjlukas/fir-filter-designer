@@ -135,7 +135,11 @@ export const App = () => {
 
   return (
     <div className='size-full flex flex-col'>
-      <Navbar isBordered maxWidth='full' className='pr-4'>
+      <Navbar
+        isBordered
+        maxWidth='full'
+        className='h-12 min-h-12 md:h-20 pr-4 overflow-x-scroll overflow-y-hidden'
+      >
         <NavbarBrand>
           <h1 className='font-bold font-mono'>FIR FILTER DESIGNER</h1>
         </NavbarBrand>
@@ -156,7 +160,7 @@ export const App = () => {
           />
         </NavbarContent>
       </Navbar>
-      <div className='h-full overflow-hidden grid grid-rows-3 grid-cols-1 md:grid-rows-1 md:grid-cols-3 md:gap-2 lg:grid-cols-4 content-stretch p-1 '>
+      <div className='h-auto overflow-hidden grid grid-rows-3 grid-cols-1 md:grid-rows-1 md:grid-cols-3 md:gap-2 lg:grid-cols-4 p-1'>
         <Card>
           <CardHeader>
             <h1>Filter Settings</h1>
@@ -271,7 +275,7 @@ export const App = () => {
             </Button>
           </CardFooter>
         </Card>
-        <Card className='col-span-2 row-span-2 lg:col-span-3 h-full m-0 p-0'>
+        <Card className='col-span-2 row-span-2 lg:col-span-3 w-full aspect-square md:h-full m-0 p-0'>
           <CardBody className='h-full'>
             <Tabs radius='lg'>
               <Tab
