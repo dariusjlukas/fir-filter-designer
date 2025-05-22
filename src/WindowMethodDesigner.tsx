@@ -212,7 +212,7 @@ export const WindowMethodDesigner = (
           <>
             <Input
               isInvalid={
-                !stringIsValidNumber(kaiserLowpassDesignParams.cutoffFreq[0])
+                !stringIsValidNumber(kaiserBandpassDesignParams.cutoffFreq[0])
               }
               errorMessage={'Input must be valid number.'}
               isDisabled={props.filterDesignInProgress}
@@ -228,7 +228,7 @@ export const WindowMethodDesigner = (
             />
             <Input
               isInvalid={
-                !stringIsValidNumber(kaiserLowpassDesignParams.cutoffFreq[1])
+                !stringIsValidNumber(kaiserBandpassDesignParams.cutoffFreq[1])
               }
               errorMessage={'Input must be valid number.'}
               isDisabled={props.filterDesignInProgress}
