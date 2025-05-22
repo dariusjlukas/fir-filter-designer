@@ -156,7 +156,7 @@ export const App = () => {
           />
         </NavbarContent>
       </Navbar>
-      <div className='h-full overflow-hidden grid grid-rows-2 grid-cols-1 md:grid-rows-1 md:grid-cols-3 md:gap-2 lg:grid-cols-4 content-stretch p-1 '>
+      <div className='h-full overflow-hidden grid grid-rows-3 grid-cols-1 md:grid-rows-1 md:grid-cols-3 md:gap-2 lg:grid-cols-4 content-stretch p-1 '>
         <Card>
           <CardHeader>
             <h1>Filter Settings</h1>
@@ -271,7 +271,7 @@ export const App = () => {
             </Button>
           </CardFooter>
         </Card>
-        <Card className='col-span-2 lg:col-span-3 h-full m-0 p-0'>
+        <Card className='col-span-2 row-span-2 lg:col-span-3 h-full m-0 p-0'>
           <CardBody className='h-full'>
             <Tabs radius='lg'>
               <Tab
