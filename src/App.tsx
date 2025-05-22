@@ -134,7 +134,7 @@ export const App = () => {
   }, [castFilterTaps]);
 
   return (
-    <div className='size-full flex flex-col'>
+    <div className='size-full flex flex-col text-xs'>
       <Navbar isBordered maxWidth='full' className='pr-4'>
         <NavbarBrand>
           <h1 className='font-bold font-mono'>FIR FILTER DESIGNER</h1>
@@ -156,7 +156,7 @@ export const App = () => {
           />
         </NavbarContent>
       </Navbar>
-      <div className='h-full overflow-hidden grid grid-cols-4 gap-2 content-stretch p-1 '>
+      <div className='h-full overflow-hidden grid grid-rows-2 grid-cols-1 md:grid-rows-1 md:grid-cols-3 md:gap-2 lg:grid-cols-4 content-stretch p-1 '>
         <Card>
           <CardHeader>
             <h1>Filter Settings</h1>
@@ -250,7 +250,7 @@ export const App = () => {
               <></>
             )}
           </CardBody>
-          <CardFooter className='min-h-24 flex flex-col gap-2'>
+          <CardFooter className='min-h-14 md:min-h-24 flex flex-col gap-2'>
             {castFilterTaps.length !== 0 && !filterDesignInProgress ? (
               <Chip variant='faded'>
                 Filter design finished! Number of taps: {castFilterTaps.length}.
@@ -271,7 +271,7 @@ export const App = () => {
             </Button>
           </CardFooter>
         </Card>
-        <Card className='col-span-3 h-full m-0 p-0'>
+        <Card className='col-span-2 lg:col-span-3 h-full m-0 p-0'>
           <CardBody className='h-full'>
             <Tabs radius='lg'>
               <Tab
