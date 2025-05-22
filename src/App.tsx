@@ -142,7 +142,7 @@ export const App = () => {
         <NavbarContent justify='end'>
           <Link
             color='foreground'
-            href='https://github.com/dariusjlukas/filter-designer'
+            href='https://github.com/dariusjlukas/fir-filter-designer/'
           >
             <FontAwesomeIcon size='xl' icon={faGithub} />
           </Link>
