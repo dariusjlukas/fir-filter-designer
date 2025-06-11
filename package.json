@@ -9,6 +9,7 @@
     "lint": "eslint .",
     "format": "prettier . --write",
     "tsc": "tsc --project tsconfig.app.json --noemit",
+    "test": "vitest --ui",
     "preview": "vite preview"
   },
   "dependencies": {
@@ -25,7 +26,6 @@
     "@types/three": "^0.176.0",
     "framer-motion": "^12.9.2",
     "mathjs": "^14.4.0",
-    "meshline": "^3.3.1",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "three": "^0.176.0",
@@ -37,6 +37,9 @@
     "@types/react-dom": "^19.0.4",
     "@typescript-eslint/eslint-plugin": "^8.31.1",
     "@vitejs/plugin-react-swc": "^3.8.0",
+    "@vitest/browser": "^3.1.4",
+    "@vitest/coverage-v8": "^3.1.4",
+    "@vitest/ui": "^3.1.4",
     "autoprefixer": "^10.4.21",
     "eslint": "^9.26.0",
     "eslint-config-prettier": "^10.1.2",
@@ -50,6 +53,7 @@
     "tailwindcss": "^3.4.17",
     "typescript": "~5.7.2",
     "typescript-eslint": "^8.31.1",
-    "vite": "^6.3.1"
+    "vite": "^6.3.1",
+    "vitest": "^3.1.4"
   }
 }

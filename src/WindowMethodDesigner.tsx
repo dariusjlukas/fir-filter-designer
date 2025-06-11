@@ -1,25 +1,28 @@
-import { addToast, Input } from '@heroui/react';
-import { bignumber, BigNumber, complex, Complex } from 'mathjs';
-import { useEffect } from 'react';
+import { addToast, Input, Select, SelectItem } from '@heroui/react';
+import { complex, Complex } from 'mathjs';
+import { useEffect, useState } from 'react';
 import * as React from 'react';
 import { useImmer } from 'use-immer';
 import {
   FilterDesignWorkerInboundMessage,
   FilterDesignWorkerOutboundMessage,
 } from './filterDesignWorker';
-import { FilterType, TapNumericType } from './App';
+import { OutputDatatype, TapNumericType } from './App';
 import { stringIsValidNumber } from './util';
-import { KaiserDesignParams } from './filterDesignFunctions';
+import {
+  DeserializedComplex,
+  DeserializedFilterObject,
+  KaiserDesignParams,
+} from './filterDesignFunctions';
 
-type DeserializedBigNumber = { mathjs: string; value: string };
-type DeserializedComplex = { mathjs: string; re: number; im: number };
+export type FilterType = 'lowpass' | 'highpass' | 'bandpass' | 'bandstop';
 
 export type WindowMethodDesignerProps = {
   className: string | undefined;
-  filterType: FilterType;
   tapNumericType: TapNumericType;
+  outputDatatype: OutputDatatype;
   sampleRate: number;
-  setFilterTaps: React.Dispatch<React.SetStateAction<BigNumber[] | Complex[]>>;
+  setFilterTaps: React.Dispatch<React.SetStateAction<number[] | Complex[]>>;
   filterDesignInProgress: boolean;
   setFilterDesignInProgress: React.Dispatch<React.SetStateAction<boolean>>;
 };
@@ -41,7 +44,7 @@ const defaultBandpassParams = {
 };
 
 const validateAndParseDesignParams = (
-  filterType: WindowMethodDesignerProps['filterType'],
+  filterType: FilterType,
   sampleRate: number,
   params: typeof defaultLowpassParams | typeof defaultBandpassParams
 ): KaiserDesignParams | null => {
@@ -98,13 +101,14 @@ export const WindowMethodDesigner = (
   const [kaiserBandpassDesignParams, setKaiserBandpassDesignParams] = useImmer<
     typeof defaultBandpassParams
   >(defaultBandpassParams);
+  const [filterType, setFilterType] = useState<FilterType>('lowpass');
 
   const kaiserDesignParamsWrapper =
-    props.filterType === 'lowpass' || props.filterType === 'highpass'
+    filterType === 'lowpass' || filterType === 'highpass'
       ? kaiserLowpassDesignParams
       : kaiserBandpassDesignParams;
   const setKaiserDesignParamsWrapper =
-    props.filterType === 'lowpass' || props.filterType === 'highpass'
+    filterType === 'lowpass' || filterType === 'highpass'
       ? setKaiserLowpassDesignParams
       : setKaiserBandpassDesignParams;
 
@@ -113,7 +117,7 @@ export const WindowMethodDesigner = (
     if (props.filterDesignInProgress) {
       if (
         validateAndParseDesignParams(
-          props.filterType,
+          filterType,
           props.sampleRate,
           kaiserDesignParamsWrapper
         ) !== null
@@ -127,11 +131,12 @@ export const WindowMethodDesigner = (
             messageType: 'filter design request',
             payload: {
               designMethod: 'window',
-              filterType: props.filterType,
+              filterType: filterType,
               tapNumericType: props.tapNumericType,
+              outputDatatype: props.outputDatatype,
               parameters: {
                 windowParameters: validateAndParseDesignParams(
-                  props.filterType,
+                  filterType,
                   props.sampleRate,
                   kaiserDesignParamsWrapper
                 ) as KaiserDesignParams,
@@ -141,16 +146,14 @@ export const WindowMethodDesigner = (
           windowDesignWorker.onmessage = (m: MessageEvent<string>) => {
             const workerMessage = JSON.parse(m.data) as {
               messageType: FilterDesignWorkerOutboundMessage['messageType'];
-              payload: DeserializedBigNumber[] | DeserializedComplex[];
+              payload: DeserializedFilterObject;
             };
             switch (workerMessage.messageType) {
-              case 'filter taps': {
+              case 'filter object': {
                 const taps =
-                  workerMessage.payload[0].mathjs === 'BigNumber'
-                    ? workerMessage.payload.map((v) =>
-                        bignumber((v as DeserializedBigNumber).value)
-                      )
-                    : workerMessage.payload.map((v) =>
+                  typeof workerMessage.payload.taps[0] === 'number'
+                    ? (workerMessage.payload.taps as number[])
+                    : workerMessage.payload.taps.map((v) =>
                         complex(
                           (v as DeserializedComplex).re,
                           (v as DeserializedComplex).im
@@ -180,18 +183,28 @@ export const WindowMethodDesigner = (
         props.setFilterDesignInProgress(false);
       }
     }
-  }, [
-    props.filterDesignInProgress,
-    props.setFilterTaps,
-    props.setFilterDesignInProgress,
-    kaiserDesignParamsWrapper,
-    props,
-  ]);
+  }, [props, kaiserDesignParamsWrapper, filterType]);
 
   return (
     <div className={props.className + ' flex flex-col gap-2'}>
       <div className='flex flex-col gap-1 p-1 border-2 border-dashed border-default/80 rounded-lg'>
-        {props.filterType === 'lowpass' || props.filterType === 'highpass' ? (
+        <Select
+          size='sm'
+          isDisabled={props.filterDesignInProgress}
+          disallowEmptySelection={true}
+          selectedKeys={[filterType]}
+          onSelectionChange={(keys) =>
+            setFilterType(keys.currentKey as FilterType)
+          }
+          selectionMode='single'
+          label='Filter Type'
+        >
+          <SelectItem key='lowpass'>Low-pass</SelectItem>
+          <SelectItem key='highpass'>High-pass</SelectItem>
+          <SelectItem key='bandpass'>Band-pass</SelectItem>
+          <SelectItem key='bandstop'>Band-stop</SelectItem>
+        </Select>
+        {filterType === 'lowpass' || filterType === 'highpass' ? (
           <Input
             isInvalid={
               !stringIsValidNumber(kaiserLowpassDesignParams.cutoffFreq)

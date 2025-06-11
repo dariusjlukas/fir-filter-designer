@@ -1,13 +1,18 @@
-import { type BigNumber, type Complex } from 'mathjs';
 import {
-  createKaiserFilter,
+  createValidatedKaiserFilter,
+  FilterObject,
   KaiserDesignParams,
 } from './filterDesignFunctions';
-import { FilterType, TapNumericType } from './App';
+import { OutputDatatype, TapNumericType } from './App';
+import { FilterType } from './WindowMethodDesigner';
+
+///////////////////////////
+/// Worker API Messages ///
+///////////////////////////
 
 export type FilterDesignWorkerOutboundMessage = {
-  messageType: 'filter taps';
-  payload: BigNumber[] | Complex[];
+  messageType: 'filter object';
+  payload: FilterObject;
 };
 
 export type FilterDesignWorkerInboundMessage = {
@@ -19,6 +24,7 @@ export type FilterDesignRequest = {
   designMethod: 'window' | 'parksMcClellan';
   filterType: FilterType;
   tapNumericType: TapNumericType;
+  outputDatatype: OutputDatatype;
   parameters: WindowDesignRequest | ParksMcClellanDesignRequest;
 };
 
@@ -30,6 +36,9 @@ type ParksMcClellanDesignRequest = {
   stopbandAttenution: number;
 };
 
+///////////////////////////
+///////////////////////////
+
 onmessage = (m: MessageEvent<FilterDesignWorkerInboundMessage>) => {
   switch (m.data.messageType) {
     case 'filter design request': {
@@ -37,14 +46,15 @@ onmessage = (m: MessageEvent<FilterDesignWorkerInboundMessage>) => {
       if (filterDesignRequest.designMethod === 'window') {
         const windowDesignRequest =
           filterDesignRequest.parameters as WindowDesignRequest;
-        const filterTaps = createKaiserFilter(
+        const filter = createValidatedKaiserFilter(
           filterDesignRequest.filterType,
           filterDesignRequest.tapNumericType,
+          filterDesignRequest.outputDatatype,
           windowDesignRequest.windowParameters
         );
         const responseMessage: FilterDesignWorkerOutboundMessage = {
-          messageType: 'filter taps',
-          payload: filterTaps,
+          messageType: 'filter object',
+          payload: filter,
         };
         postMessage(JSON.stringify(responseMessage));
       } else if (filterDesignRequest.designMethod === 'parksMcClellan') {
