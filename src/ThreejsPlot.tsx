@@ -195,6 +195,7 @@ const AxisOverlay = (props: AxisOverlayProps) => {
       >
         <meshBasicMaterial
           transparent
+          depthWrite={false}
           opacity={props.hovered ? 1 : 0.9}
           color={
             props.theme === 'dark'
