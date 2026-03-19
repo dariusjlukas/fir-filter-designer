@@ -32,6 +32,20 @@ const darkModeLineColors = [
   new THREE.Color(1, 0.4, 0),
 ];
 
+const darkAxisBgColor = new THREE.Color(0.04, 0.04, 0.04);
+const lightAxisBgColor = new THREE.Color(0.9, 0.85, 0.85);
+const darkTickColor = new THREE.Color(0.5, 0.8, 0.5);
+const lightTickColor = new THREE.Color(0.9, 0.1, 0.1);
+const darkTextColor = new THREE.Color(0.8, 0.8, 0.8);
+const lightTextColor = new THREE.Color(0.05, 0.05, 0.05);
+const darkCrosshairColor = new THREE.Color(0.5, 0.8, 0.5);
+const lightCrosshairColor = new THREE.Color(0, 0, 0);
+const darkCellColor = new THREE.Color(0.01, 0.01, 0.01);
+const lightCellColor = new THREE.Color(0.8, 0.8, 0.8);
+const darkSectionColor = new THREE.Color(0.1, 0.2, 0.1);
+const lightSectionColor = new THREE.Color(0.3, 0.1, 0.1);
+const gridRotation = new THREE.Euler(Math.PI / 2, 0, 0);
+
 type AxisOverlayProps = {
   renderPriority: number;
   axis: 'x-axis' | 'y-axis';
@@ -185,8 +199,8 @@ const AxisOverlay = (props: AxisOverlayProps) => {
           opacity={props.hovered ? 1 : 0.9}
           color={
             props.theme === 'dark'
-              ? new THREE.Color(0.04, 0.04, 0.04)
-              : new THREE.Color(0.9, 0.85, 0.85)
+              ? darkAxisBgColor
+              : lightAxisBgColor
           }
         />
       </Plane>
@@ -206,8 +220,8 @@ const AxisOverlay = (props: AxisOverlayProps) => {
             lineWidth={2}
             color={
               props.theme === 'dark'
-                ? new THREE.Color(0.5, 0.8, 0.5)
-                : new THREE.Color(0.9, 0.1, 0.1)
+                ? darkTickColor
+                : lightTickColor
             }
             points={
               props.axis === 'y-axis'
@@ -235,8 +249,8 @@ const AxisOverlay = (props: AxisOverlayProps) => {
             }}
             color={
               props.theme === 'dark'
-                ? new THREE.Color(0.8, 0.8, 0.8)
-                : new THREE.Color(0.05, 0.05, 0.05)
+                ? darkTextColor
+                : lightTextColor
             }
             position={
               props.axis === 'y-axis'
@@ -394,8 +408,8 @@ const Crosshair = (props: CrosshairProps) => {
         ref={xLineRef}
         color={
           props.theme === 'dark'
-            ? new THREE.Color(0.5, 0.8, 0.5)
-            : new THREE.Color(0, 0, 0)
+            ? darkCrosshairColor
+            : lightCrosshairColor
         }
         visible={props.pointerOverCanvas && !props.axisHovered}
         points={[
@@ -411,8 +425,8 @@ const Crosshair = (props: CrosshairProps) => {
         ref={yLineRef}
         color={
           props.theme === 'dark'
-            ? new THREE.Color(0.5, 0.8, 0.5)
-            : new THREE.Color(0, 0, 0)
+            ? darkCrosshairColor
+            : lightCrosshairColor
         }
         visible={props.pointerOverCanvas && !props.axisHovered}
         points={[
@@ -456,8 +470,8 @@ const Crosshair = (props: CrosshairProps) => {
             <meshBasicMaterial
               color={
                 props.theme === 'dark'
-                  ? new THREE.Color(0.04, 0.04, 0.04)
-                  : new THREE.Color(0.9, 0.85, 0.85)
+                  ? darkAxisBgColor
+                  : lightAxisBgColor
               }
             />
           </Plane>
@@ -467,8 +481,8 @@ const Crosshair = (props: CrosshairProps) => {
             }}
             color={
               props.theme === 'dark'
-                ? new THREE.Color(0.8, 0.8, 0.8)
-                : new THREE.Color(0.05, 0.05, 0.05)
+                ? darkTextColor
+                : lightTextColor
             }
             position={
               axis === 'y-axis'
@@ -765,18 +779,18 @@ export const ThreejsPlot = (props: ThreejsPlotProps) => {
             cellSize={cellSize}
             cellColor={
               props.theme === 'dark'
-                ? new THREE.Color(0.01, 0.01, 0.01)
-                : new THREE.Color(0.8, 0.8, 0.8)
+                ? darkCellColor
+                : lightCellColor
             }
             sectionThickness={1}
             sectionSize={sectionSize}
             sectionColor={
               props.theme === 'dark'
-                ? new THREE.Color(0.1, 0.2, 0.1)
-                : new THREE.Color(0.3, 0.1, 0.1)
+                ? darkSectionColor
+                : lightSectionColor
             }
             followCamera
-            rotation={new THREE.Euler(Math.PI / 2, 0, 0)}
+            rotation={gridRotation}
           />
           <Crosshair
             theme={props.theme}
