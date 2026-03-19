@@ -1,5 +1,5 @@
 /* eslint-disable react/no-unknown-property */
-import { Canvas, useFrame, useThree } from '@react-three/fiber';
+import { Canvas, invalidate, useFrame, useThree } from '@react-three/fiber';
 import {
   Circle,
   Grid,
@@ -657,26 +657,44 @@ export const ThreejsPlot = (props: ThreejsPlotProps) => {
   const xAxisThickness = 80;
   const yAxisThickness = 150;
 
-  const xScaleRange: [number, number] = [
-    linearMap(-cameraWidth / 2, -1, 1, min(props.xValues), max(props.xValues)),
-    linearMap(cameraWidth / 2, -1, 1, min(props.xValues), max(props.xValues)),
-  ];
-  const yScaleRange: [number, number] = [
-    linearMap(
-      -cameraHeight / 2,
-      -1,
-      1,
-      min(props.yValues) as number,
-      max(props.yValues) as number
-    ),
-    linearMap(
-      cameraHeight / 2,
-      -1,
-      1,
-      min(props.yValues) as number,
-      max(props.yValues) as number
-    ),
-  ];
+  const xScaleRange = useMemo<[number, number]>(
+    () => [
+      linearMap(
+        -cameraWidth / 2,
+        -1,
+        1,
+        min(props.xValues),
+        max(props.xValues)
+      ),
+      linearMap(
+        cameraWidth / 2,
+        -1,
+        1,
+        min(props.xValues),
+        max(props.xValues)
+      ),
+    ],
+    [props.xValues]
+  );
+  const yScaleRange = useMemo<[number, number]>(
+    () => [
+      linearMap(
+        -cameraHeight / 2,
+        -1,
+        1,
+        min(props.yValues) as number,
+        max(props.yValues) as number
+      ),
+      linearMap(
+        cameraHeight / 2,
+        -1,
+        1,
+        min(props.yValues) as number,
+        max(props.yValues) as number
+      ),
+    ],
+    [props.yValues]
+  );
 
   const [xAxisHovered, setXAxisHovered] = useState(false);
   const [pointerOverXAxis, setPointerOverXAxis] = useState(false);
@@ -718,12 +736,16 @@ export const ThreejsPlot = (props: ThreejsPlotProps) => {
           </p>
         </div>
         <Canvas
+          frameloop="demand"
           className={`size-full bg-default-100 rounded-lg ${!xAxisHovered && !yAxisHovered ? 'cursor-none' : ''} ${xAxisHovered ? 'cursor-ew-resize' : ''} ${yAxisHovered ? 'cursor-ns-resize' : ''}`}
+          onPointerMove={() => invalidate()}
           onPointerEnter={() => {
             setPointerOverCanvas(true);
+            invalidate();
           }}
           onPointerLeave={() => {
             setPointerOverCanvas(false);
+            invalidate();
           }}
           onPointerDown={() => {
             setPointerDown(true);
