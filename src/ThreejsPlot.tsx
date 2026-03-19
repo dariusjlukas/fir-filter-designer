@@ -1,7 +1,6 @@
 /* eslint-disable react/no-unknown-property */
 import { Canvas, invalidate, useFrame, useThree } from '@react-three/fiber';
 import {
-  Circle,
   Grid,
   Hud,
   Line,
@@ -529,6 +528,52 @@ const ControlsLockingHandler = (props: ControlsLockingHandlerProps) => {
   return <></>;
 };
 
+type PointSeriesProps = {
+  linePoints: THREE.Vector3[];
+  yZeroMapped: number;
+  color: THREE.Color;
+};
+
+const circleGeometry = new THREE.CircleGeometry(1, 16);
+
+const PointSeries = ({ linePoints, yZeroMapped, color }: PointSeriesProps) => {
+  const { size } = useThree();
+  const meshRef = useRef<THREE.InstancedMesh>(null);
+
+  const stemSegments = useMemo(
+    () =>
+      linePoints.flatMap((point) => [
+        new THREE.Vector3(point.x, yZeroMapped, point.z),
+        new THREE.Vector3(point.x, point.y, point.z),
+      ]),
+    [linePoints, yZeroMapped]
+  );
+
+  useEffect(() => {
+    if (meshRef.current) {
+      const tempMatrix = new THREE.Matrix4();
+      const position = new THREE.Vector3();
+      const quaternion = new THREE.Quaternion();
+      const scale = new THREE.Vector3(10 / size.width, 10 / size.height, 1);
+      linePoints.forEach((point, idx) => {
+        position.set(point.x, point.y, point.z);
+        tempMatrix.compose(position, quaternion, scale);
+        meshRef.current!.setMatrixAt(idx, tempMatrix);
+      });
+      meshRef.current.instanceMatrix.needsUpdate = true;
+    }
+  }, [linePoints, size]);
+
+  return (
+    <>
+      <Line segments lineWidth={2} color={color} points={stemSegments} />
+      <instancedMesh ref={meshRef} args={[circleGeometry, undefined, linePoints.length]}>
+        <meshBasicMaterial color={color} />
+      </instancedMesh>
+    </>
+  );
+};
+
 type DataDisplayProps = {
   plotType: 'line' | 'point';
   theme: string;
@@ -537,9 +582,14 @@ type DataDisplayProps = {
 };
 
 const DataDisplay = (props: DataDisplayProps) => {
-  const { size } = useThree();
+  const { plotPoints, yZeroMapped } = useMemo(() => {
+    const xMin = min(props.xValues) as number;
+    const xMax = max(props.xValues) as number;
+    const yFlat = props.yValues.flat();
+    const yMin = min(yFlat) as number;
+    const yMax = max(yFlat) as number;
+    const yZeroMapped = linearMap(0, yMin, yMax, -1, 1);
 
-  const plotPoints = useMemo(() => {
     const plotPointsArray: THREE.Vector3[][] = [];
     // Initialize plot points array
     props.yValues.forEach(() => plotPointsArray.push([]));
@@ -551,26 +601,14 @@ const DataDisplay = (props: DataDisplayProps) => {
       props.yValues.forEach((yValueArray, yValuesIndex) =>
         plotPointsArray[yValuesIndex].push(
           new THREE.Vector3(
-            linearMap(
-              props.xValues[xValuesIndex],
-              min(props.xValues),
-              max(props.xValues),
-              -1,
-              1
-            ),
-            linearMap(
-              yValueArray[xValuesIndex],
-              min(props.yValues.flat()),
-              max(props.yValues.flat()),
-              -1,
-              1
-            ),
+            linearMap(props.xValues[xValuesIndex], xMin, xMax, -1, 1),
+            linearMap(yValueArray[xValuesIndex], yMin, yMax, -1, 1),
             0.01
           )
         )
       );
     }
-    return plotPointsArray;
+    return { plotPoints: plotPointsArray, yZeroMapped };
   }, [props.xValues, props.yValues]);
 
   return (
@@ -589,47 +627,16 @@ const DataDisplay = (props: DataDisplayProps) => {
             points={linePoints}
           />
         ) : (
-          linePoints.map((point, pointIndex) => (
-            <>
-              <Line
-                key={'line-' + pointIndex}
-                points={[
-                  new THREE.Vector3(
-                    point.x,
-                    linearMap(
-                      0,
-                      min(props.yValues.flat()),
-                      max(props.yValues.flat()),
-                      -1,
-                      1
-                    ),
-                    point.z
-                  ),
-                  new THREE.Vector3(point.x, point.y, point.z),
-                ]}
-                color={
-                  props.theme === 'dark'
-                    ? darkModeLineColors[i]
-                    : lightModeLineColors[i]
-                }
-                lineWidth={2}
-              />
-              <Circle
-                key={'circle-' + pointIndex}
-                position={point}
-                args={[1, 16]}
-                scale={[10 / size.width, 10 / size.height, 1]}
-              >
-                <meshBasicMaterial
-                  color={
-                    props.theme === 'dark'
-                      ? darkModeLineColors[i]
-                      : lightModeLineColors[i]
-                  }
-                />
-              </Circle>
-            </>
-          ))
+          <PointSeries
+            key={i}
+            linePoints={linePoints}
+            yZeroMapped={yZeroMapped}
+            color={
+              props.theme === 'dark'
+                ? darkModeLineColors[i]
+                : lightModeLineColors[i]
+            }
+          />
         )
       )}
     </>
